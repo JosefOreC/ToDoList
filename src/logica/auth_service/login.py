@@ -3,7 +3,7 @@
 """
 
 from src.logica.connection_db.recover_data.user_data.recovery_auth_data import RecoverAuthData
-from src.modelo.class_session_manager import SessionManager
+from src.modelo.session_manager import SessionManager
 
 class LoginIn:
 

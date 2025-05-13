@@ -2,7 +2,7 @@
     Crea la clase con la que se operará toda la aplicacion
 """
 
-from src.modelo.class_user import User
+from src.modelo.user import User
 
 
 class SessionManager(User):
