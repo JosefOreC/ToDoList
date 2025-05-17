@@ -1,12 +1,11 @@
-from src.logica.connection_db.recover_data.user_data.recovery_auth_data import RecoverAuthData
-from src.logica.connection_db.connection import ConnectionDataBase
-from src.logica.connection_db.insert_data import (InsertData)
-
 """
     Crea la clase para el registro de un nuevo usuario
     Tiene las restricciones de:
         No puede crear usuarios con el mismo alias
 """
+
+from src.logica.connection_db.recover_data.user_data.recovery_auth_data import RecoverAuthData
+from src.logica.connection_db.insert_data import (InsertData)
 
 
 class RegisterUser:
@@ -40,9 +39,7 @@ class RegisterUser:
         return True
 
     def is_same_password(self):
-        if self.__password == self.__confirm_password:
-            return True
-        return False
+        return self.__password == self.__confirm_password
 
     def register_user(self):
         if not self.is_same_password():
@@ -57,15 +54,9 @@ class RegisterUser:
         return True, "SE GUARDÓ AL NUEVO USUARIO"
 
     def save_in_db(self):
-        call_successful, response = InsertData.insert_user(name=self.__name, apellido_paterno=self.__apellido_paterno,
+        return InsertData.insert_user(name=self.__name, apellido_paterno=self.__apellido_paterno,
                                apellido_materno=self.__apellido_materno, alias=self.__alias,
                                password = self.__password)
-
-        if not call_successful:
-            #view error
-            pass
-
-        return call_successful, response
 
 
 

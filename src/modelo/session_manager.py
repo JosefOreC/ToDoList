@@ -28,6 +28,8 @@ class SessionManager(User):
     @staticmethod
     def get_instance(initial_id = None, alias = None, password = None):
         if not SessionManager.__instance:
+            if not initial_id or not alias or not password:
+                raise Exception("No existen datos requeridos. No se pudo crear la instancia")
             SessionManager.__instance = SessionManager(initial_id,
                                                        alias,
                                                        password)
