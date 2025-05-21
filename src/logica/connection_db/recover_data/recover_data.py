@@ -34,3 +34,7 @@ class RecoverData:
             query = RecoverData.add_limit(query, limit)
 
         return query
+
+
+if __name__ == "__main__":
+    RecoverData.constructor_query()

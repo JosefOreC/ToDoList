@@ -17,14 +17,12 @@ class LoginIn:
 
     def user_exits(self):
         call_successful, response = RecoverAuthData.recover_id_user_for_alias(alias=self.__alias)
-        if not call_successful or not response:
+        if not call_successful or not response: # (-p v -q)
             return False
         return True
 
     def password_confirm(self):
-        if self.__password == self.__data_user.get('password'):
-            return True
-        return False
+        return self.__password == self.__data_user.get('password')
 
     def process_login(self):
         if self.user_exits():
@@ -37,7 +35,8 @@ class LoginIn:
             return False, self.__data_user
 
         if self.password_confirm():
-            SessionManager.get_instance(self.__data_user.get('name'),
+            SessionManager.log_out()
+            SessionManager.get_instance(self.__data_user.get('id_user'),
                                         self.__data_user.get('alias'),
                                         self.__data_user.get('password'))
             return True, "USER LOGIN SUCCESSFUL"

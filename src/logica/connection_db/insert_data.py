@@ -42,9 +42,7 @@ class InsertData:
             if i < len(atributs) - 1:
                 query += ", "
 
-        query += ')'
-
-        return query
+        return query + ')'
 
     @staticmethod
     def insert_user(name: str, apellido_paterno: str, apellido_materno: str , alias: str, password: str):

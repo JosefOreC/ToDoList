@@ -34,15 +34,15 @@ class SessionManager(User):
                                                        alias,
                                                        password)
             return SessionManager.__instance
-
-        if initial_id:
-            SessionManager.__instance.update_id(initial_id)
-        if alias:
-            SessionManager.__instance.set_alias(alias)
-        if password:
-            SessionManager.__instance.set_password(password)
+        if initial_id or alias or password:
+            raise Exception("Se recibió más parámetros de los requeridos."
+                            " Falla en la recuperación del Session Manager")
         return SessionManager.__instance
 
+
+    @staticmethod
+    def log_out():
+        SessionManager.__instance = None
 
     def get_password(self):
         return self.__password
