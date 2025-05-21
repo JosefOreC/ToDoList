@@ -8,24 +8,20 @@ class RecoverData:
             if atributs.index(atribut) != len(atributs) - 1:
                 query += ', '
 
-        query += f" FROM {table}"
-        return query
+        return query + f" FROM {table}"
 
     @staticmethod
     def add_limit(query, limit: int):
-        query += f" LIMIT {limit}"
-        return query
+
+        return query + f" LIMIT {limit}"
 
     @staticmethod
     def add_where(query, conditions):
-        query += " WHERE "
-        query += conditions
-        return query
+        return query + " WHERE " + conditions
 
     @staticmethod
     def add_order_by(query, order_by: str):
-        query += f" ORDER BY {order_by}"
-        return query
+        return query + f" ORDER BY {order_by}"
 
     @staticmethod
     def constructor_query(table: str, atributs: list, where: str=None, order_by: str = None, limit: int=None):
