@@ -9,10 +9,10 @@ from sqlalchemy.orm import relationship
 from rol import Rol
 
 class UsuarioGrupo(Base):
-    __tablename__ = 'USUARIO_GRUPO'
+    __tablename__ = 'UsuarioGrupo'
 
-    IDUsuario = Column(Integer, ForeignKey('USUARIO.IDUsuario'), primary_key=True)
-    IDGrupo = Column(Integer, ForeignKey('GRUPO.IDGrupo'), primary_key=True)
+    IDUsuario = Column(Integer, ForeignKey('Usuario.IDUsuario'), primary_key=True)
+    IDGrupo = Column(Integer, ForeignKey('Grupo.IDGrupo'), primary_key=True)
     rol = Column(Enum(Rol), nullable=False)
 
     usuario = relationship('Usuario', back_populates='grupos_relacion')

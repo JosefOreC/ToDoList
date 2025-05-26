@@ -1,33 +1,31 @@
 from base.declarative_base import Base, engine
-
-from usuario_grupo_model import UsuarioGrupo
-from grupo import Grupo
-from rol import Rol
-from usuario import Usuario
 from sqlalchemy.orm import sessionmaker
-
-usuario = Usuario(Nombres='Carlos Alberto', Apellidos = 'Tovar',
-                  Alias = 'Beto', Estado = 1, Password = 'Cisco')
-
-grupo = Grupo(grupo = 'Wasaverto', Fecha_Creacion = '17-03-2025',
-              Descripcion = 'SE NOS FUE DE LAS MANOS',
-              IDMaster = 1)
-
-
-
+from grupo import Grupo
+from usuario import Usuario
+from rol import Rol
+from usuario_grupo_model import UsuarioGrupo
+from datetime import datetime
 
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
+usuario = Usuario(Nombres='Josef Pablo', Apellidos = 'Oré Campos',
+                  Alias = 'JosefOre', Estado = 1, Password = 'cisco')
+fecha = datetime.strptime('26-05-2025', '%d-%m-%Y').date()
 
-
-session.add([usuario,grupo])
+session.add_all([usuario])
 session.commit()
+
+grupo = Grupo(Nombre = 'Wasaverto', Fecha_Creacion = fecha,
+              Descripcion = 'SE NOS FUE DE LAS MANOS',
+              IDMaster = usuario.IDUsuario)
+
+session.add_all([grupo])
 
 rel1 = UsuarioGrupo(usuario=usuario, grupo=grupo, rol = Rol.master)
-session.add([rel1])
+session.add_all([rel1])
 session.commit()
 
-for rel in usuario.grupos_relacion:
-    print(usuario.grupo.Nombre)
+for rel in session.query(Usuario).all():
+    print(rel.Nombres)

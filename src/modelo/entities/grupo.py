@@ -10,7 +10,7 @@ from base.declarative_base import Base
 
 
 class Grupo(Base):
-    __tablename__ = 'GRUPO'
+    __tablename__ = 'Grupo'
 
 
     IDGrupo = Column(Integer, primary_key=True)
