@@ -1,6 +1,6 @@
 
 
-from src.logica.connection_db.connection import ConnectionDataBase
+from src.modelo.database_management.connection import ConnectionDataBase
 
 
 class InsertData:

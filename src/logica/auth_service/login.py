@@ -2,8 +2,8 @@
     Genera la lógica del inicio de sesión
 """
 
-from src.logica.connection_db.recover_data.user_data.recovery_auth_data import RecoverAuthData
-from src.modelo.session_manager import SessionManager
+from src.modelo.database_management.recover_data.user_data.recovery_auth_data import RecoverAuthData
+from src.modelo.session_service.session_manager import SessionManager
 
 class LoginIn:
 

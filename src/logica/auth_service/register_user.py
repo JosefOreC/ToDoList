@@ -4,8 +4,8 @@
         No puede crear usuarios con el mismo alias
 """
 
-from src.logica.connection_db.recover_data.user_data.recovery_auth_data import RecoverAuthData
-from src.logica.connection_db.insert_data import (InsertData)
+from src.modelo.database_management.recover_data.user_data.recovery_auth_data import RecoverAuthData
+from src.modelo.database_management.insert_data import (InsertData)
 
 
 class RegisterUser:
