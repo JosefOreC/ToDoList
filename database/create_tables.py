@@ -24,7 +24,7 @@ tables = [
             );
         """,
         """
-            CREATE TABLE USUARIO_GRUPO (
+            CREATE TABLE USUARIO_GRUPO(
                 IDUsuario INT,
                 IDGrupo INT,
                 PRIMARY KEY (IDUsuario, IDGrupo),
@@ -46,6 +46,7 @@ tables = [
                 Nombre VARCHAR(100),
                 Descripcion TEXT,
                 Activo INT,
+                View INT,
                 Fecha_Programada DATE,
                 IDPrioridad INT,
                 FOREIGN KEY (IDPrioridad) REFERENCES PRIORIDAD(IDPrioridad)
@@ -62,9 +63,7 @@ tables = [
             );
         """,
         """
-            CREATE TABLE CLIENTE_TAREA (
-                IDCliente_Tarea INT PRIMARY KEY,
-                IDCliente INT AUTO_INCREMENT,
+            CREATE TABLE USUARIO_TAREA (
                 IDUsuario INT,
                 IDTarea INT,
                 IDGrupo INT,

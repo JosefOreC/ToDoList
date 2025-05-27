@@ -18,6 +18,5 @@ class UsuarioGrupo(Base):
     usuario = relationship('Usuario', back_populates='grupos_relacion')
     grupo = relationship('Grupo', back_populates='usuarios_relacion')
 
-
 if __name__ == '__main__':
     pass

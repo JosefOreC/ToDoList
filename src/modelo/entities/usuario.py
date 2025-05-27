@@ -32,6 +32,7 @@ class Usuario(Base):
 
     grupos_master = relationship('Grupo', back_populates='master', foreign_keys='Grupo.IDMaster')
 
+    usuario_tareas = relationship('UsuarioTarea', back_populates='usuario')
 
 
 if __name__ == "__main__":

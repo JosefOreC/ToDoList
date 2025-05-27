@@ -23,5 +23,7 @@ class Grupo(Base):
 
     usuarios_relacion = relationship('UsuarioGrupo', back_populates='grupo')
 
+    grupo_tareas = relationship('UsuarioTarea', back_populates='grupo')
+
 if __name__ == '__main__':
     pass
