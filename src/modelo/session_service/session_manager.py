@@ -2,10 +2,9 @@
     Crea la clase con la que se operará toda la aplicacion
 """
 
-from src.modelo.entities.usuario import User
+from src.modelo.entities.usuario import Usuario
 
-
-class SessionManager(User):
+class SessionManager:
     """
         Con esta clase se crearan y ejecutaran todas las acciones de la aplicacion
         Marcando los create y edit con su ID
@@ -17,26 +16,18 @@ class SessionManager(User):
             - validar tarea
             - extraer tareas... etc
     """
-
-    __password: str
     __instance = None
 
-    def __init__(self, initial_id, alias, password):
-        super().__init__(initial_id, alias)
-        self.__password = password
+    def __init__(self, usuario):
+        self.usuario = usuario
 
     @staticmethod
-    def get_instance(initial_id = None, alias = None, password = None):
+    def get_instance(usuario: Usuario = None):
         if not SessionManager.__instance:
-            if not initial_id or not alias or not password:
-                raise Exception("No existen datos requeridos. No se pudo crear la instancia")
-            SessionManager.__instance = SessionManager(initial_id,
-                                                       alias,
-                                                       password)
-            return SessionManager.__instance
-        if initial_id or alias or password:
-            raise Exception("Se recibió más parámetros de los requeridos."
-                            " Falla en la recuperación del Session Manager")
+            if not usuario:
+                raise Exception("No existe un usuario logueado ahora mismo OR "
+                                "\nNo se mandaron los datos necesarios para el inicio de sesión")
+            SessionManager.__instance = SessionManager(usuario)
         return SessionManager.__instance
 
 
@@ -45,10 +36,12 @@ class SessionManager(User):
         SessionManager.__instance = None
 
     def get_password(self):
-        return self.__password
+        return self.usuario.Password
 
-    def set_password(self, new_password):
-        self.__password = new_password
+    def validar_usuario(self, password):
+        if self.usuario and self.usuario.Password == password:
+            return True
+        return False
 
 if __name__ == "__main__":
     pass

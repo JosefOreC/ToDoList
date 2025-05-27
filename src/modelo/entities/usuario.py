@@ -4,13 +4,10 @@
     para las subclases Operador e Integrante
 """
 
-
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship, sessionmaker
 
 from base.declarative_base import Base, engine
-
-
 
 
 class Usuario(Base):
