@@ -1,5 +1,5 @@
-from src.logica.connection_db.connection import ConnectionDataBase
-from src.logica.connection_db.recover_data.recover_data import RecoverData
+from src.modelo.database_management.connection import ConnectionDataBase
+from src.modelo.database_management.recover_data.recover_data import RecoverData
 
 class RecoverAuthData:
     __connection = ConnectionDataBase.get_instance()

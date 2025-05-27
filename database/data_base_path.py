@@ -1,6 +1,6 @@
 import sqlite3
 class Recover:
-    conn = sqlite3.connect("../src/logica/connection_db/todolist_db.db")
+    conn = sqlite3.connect("../src/modelo/database_management/todolist_db.db")
     def recovering(self):
         return self.conn
     def recover_cursor(self):
