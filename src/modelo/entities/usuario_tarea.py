@@ -3,7 +3,7 @@
 """
 from sqlalchemy.orm import relationship
 
-from base.declarative_base import Base
+from src.modelo.entities.base.declarative_base import Base
 from sqlalchemy import Column, ForeignKey, Integer, String, Boolean
 
 class UsuarioTarea(Base):

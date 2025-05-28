@@ -6,7 +6,7 @@ from sqlalchemy import Column, Integer, String, DATE, ForeignKey
 from sqlalchemy.orm import Relationship, relationship
 
 
-from base.declarative_base import Base
+from src.modelo.entities.base.declarative_base import Base
 
 
 class Grupo(Base):

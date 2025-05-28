@@ -3,10 +3,10 @@
 
 """
 
-from base.declarative_base import Base
+from src.modelo.entities.base.declarative_base import Base
 from sqlalchemy import Integer, ForeignKey, Column, Enum, UniqueConstraint
 from sqlalchemy.orm import relationship
-from rol import Rol
+from src.modelo.entities.rol import Rol
 
 class UsuarioGrupo(Base):
     __tablename__ = 'UsuarioGrupo'

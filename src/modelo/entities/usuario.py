@@ -7,7 +7,7 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship, sessionmaker
 
-from base.declarative_base import Base, engine
+from src.modelo.entities.base.declarative_base import Base, engine
 
 
 class Usuario(Base):

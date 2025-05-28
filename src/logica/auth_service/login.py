@@ -25,4 +25,4 @@ class LoginIn:
 
 
 if __name__ == "__main__":
-    pass
+    print(LoginIn('Betos', 'Cisco').process_login())
