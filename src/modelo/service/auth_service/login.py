@@ -2,8 +2,8 @@
     Genera la lógica del inicio de sesión
 """
 
-from src.modelo.session_service.session_manager import SessionManager
-from src.modelo.session_service.user_service import UserService
+from src.modelo.service.session_service.session_manager import SessionManager
+from src.modelo.service.session_service.user_service import UserService
 
 class LoginIn:
 

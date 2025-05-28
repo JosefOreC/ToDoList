@@ -2,9 +2,9 @@
     vista
 """
 import tkinter as tk
-from importlib.metadata import pass_none
 
-from src.logica.auth_service.login import LoginIn
+
+from src.controlador.login_controller import LoginController
 
 class RootView:
 
@@ -89,7 +89,7 @@ class LoginInView:
     def btn_login(self):
         alias = self.root.componentes.get('alias').get()
         password = self.root.componentes.get('password').get()
-        is_login, response = LoginIn.event_login(alias, password)
+        is_login, response = LoginController.login(alias, password)
 
         if is_login:
 

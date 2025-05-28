@@ -4,25 +4,13 @@
         No puede crear usuarios con el mismo alias
 """
 
-from src.modelo.database_management.recover_data.user_data.recovery_auth_data import RecoverAuthData
-from src.modelo.database_management.insert_data import (InsertData)
+from src.modelo.entities.usuario import Usuario
 
 
 class RegisterUser:
 
-    __alias: str
-    __name: str
-    __apellido_paterno: str
-    __apellido_materno: str
-    __password: str
-    __confirm_password: str
-
-    def __init__(self, alias, name, apellido_paterno, apellido_materno, password, confirm_password):
-        self.__alias = alias
-        self.__name = name
-        self.__apellido_materno = apellido_materno
-        self.__apellido_paterno = apellido_paterno
-        self.__password = password
+    def __init__(self, usuario: Usuario, confirm_password):
+        self.usuario = Usuario
         self.__confirm_password = confirm_password
 
     def is_alias_valid(self):
