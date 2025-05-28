@@ -10,7 +10,7 @@ class UsuarioTarea(Base):
     __tablename__ = 'UsuarioTarea'
     IDUsuario = Column(Integer, ForeignKey('Usuario.IDUsuario'), primary_key=True)
     IDTarea = Column(Integer, ForeignKey('Tarea.IDTarea'), primary_key=True)
-    IDGrupo = Column(Integer, ForeignKey('Grupo.IDGrupo'), primary_key=True, nullable=True)
+    IDGrupo = Column(Integer, ForeignKey('Grupo.IDGrupo'), nullable=True)
 
     Disponible = Column(Boolean, default=True)
     Realizado = Column(Boolean, default=False)

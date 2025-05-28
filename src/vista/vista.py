@@ -2,9 +2,9 @@
     vista
 """
 import tkinter as tk
-from multiprocessing.spawn import set_executable
 
 from src.controlador.login_controller import LoginController
+
 
 class RootView:
 
@@ -13,15 +13,14 @@ class RootView:
     def __init__(self):
         self.root = tk.Tk()
         self.root.geometry("600x400")
-        self.root.config(bg = 'white')
+        self.root.config(bg='white')
         self.root.title('TO DO LIST')
 
     def __comprobate_existe(self, name):
-        if componente:=self.componentes.get(name):
+        if componente := self.componentes.get(name):
             componente.destroy()
 
-
-    def create_button(self, name:str, funcion, text:str ='', place: [int,int] = 'pack'):
+    def create_button(self, name: str, funcion, text: str = '', place: [int, int] = 'pack'):
         self.__comprobate_existe(name)
         bt = tk.Button(self.root, text=text, command=funcion)
         if place == 'pack':
@@ -29,8 +28,6 @@ class RootView:
         else:
             bt.place(x=place[0], y=place[1])
         self.componentes[name] = bt
-
-
 
     def create_input(self, name, place: [int,int]='pack', secret=False):
         self.__comprobate_existe(name)
@@ -66,8 +63,6 @@ class RootView:
         for componente in self.componentes:
             self.componentes[componente].destroy()
         self.componentes.clear()
-
-
 
 class LoginInView:
 
@@ -115,6 +110,7 @@ class RegisterUserView:
         self.create_register_interface()
 
     def create_register_interface(self):
+        self.root.create_button(name='btnRegresarLogin', text='Volver', funcion=self.go_to_login)
         self.root.create_label(name='lblNombreRegistro', text='Nombres: ', fg='BLACK')
         self.root.create_input(name='inpNombreRegistro')
         self.root.create_label(name='lblApellidoRegistro', text='Apellidos: ')
@@ -160,4 +156,35 @@ class RegisterUserView:
     def go_to_login(self):
         self.root.limpiar_componentes()
         LoginInView(self.root)
+
+
+class MainView:
+    def __init__(self, root):
+        self.root = root
+
+    def create_main_interface(self):
+        pass#self.root.create_button(name='btnCrearTarea', text='Crear Tarea', funcion=)
+
+    def go_to_create_tarea(self):
+        self.root.limpiar_componentes()
+
+class RegisterTareaUserView:
+    def __init__(self, root):
+        self.root = root
+
+    def create_fomulate_tarea(self):
+        self.root.create_label(name='lblNombreCreateTareaUser', text='Nombre: ')
+        self.root.create_input(name='inpNombreCreateTareaUser')
+        self.root.create_label(name='lblFechaProgramadaCreateTareaUser', text='Fecha de accion (dd-mm-aaaa): ')
+        self.root.create_input(name='inpFechaProgramadaCreateTareaUser')
+        self.root.create_label(name='lblPrioridadCreateTarea', text='Prioridad: ')
+        self.root.create_input(name='inpPrioridadCreateTarea')
+        self.root.create_button(name='btnRegistrarTareaCreateTarea', text='Registrar Tarea')
+
+    def btn_registrar_tarea(self):
+        nombre = self.root.componentes.get('inpNombreCreateTareaUser').get()
+        fecha = self.root.componentes.get('inpNombreCreateTareaUser').get()
+        prioridad = self.root.componentes.get('inpPrioridadCreateTarea').get()
+
+
 

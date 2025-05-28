@@ -7,25 +7,26 @@
 from src.modelo.entities.usuario import Usuario
 from src.modelo.service.session_service.user_service import UserService
 
+
 class RegisterUser:
 
     def __init__(self, usuario: Usuario):
         self.usuario = usuario
 
     def register_user(self):
+
         if UserService.is_user_with_alias_exits(self.usuario.Alias):
-           return False, 'Alias ocupado.'
+            return False, 'Alias ocupado.'
 
         try:
-            UserService.insert_new_user(self.usuario)
+            self.save_in_db()
         except Exception as E:
             return False, E
+
         return True, "SE GUARDÓ AL NUEVO USUARIO"
 
     def save_in_db(self):
         UserService.insert_new_user(self.usuario)
-
-
 
 
 if __name__ == "__main__":
