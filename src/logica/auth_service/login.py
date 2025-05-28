@@ -4,6 +4,7 @@
 
 from src.modelo.session_service.session_manager import SessionManager
 from src.modelo.session_service.user_service import UserService
+
 class LoginIn:
 
     def __init__(self, alias, password):
@@ -11,17 +12,19 @@ class LoginIn:
         self.__password = password
 
     def process_login(self):
+        SessionManager.log_out()
         usuario = UserService.recover_user_for_alias(self.__alias)
-
         if not usuario:
             return False, "EL USUARIO NO EXISTE"
-
-        SessionManager.log_out()
         SessionManager.get_instance(usuario)
         if SessionManager.get_instance().validar_usuario(self.__password):
             return True, "USER LOGIN SUCCESSFUL"
         SessionManager.log_out()
         return False, "CONTRASEÑA INCORRECTA"
+
+    @staticmethod
+    def event_login(alias, password):
+        return LoginIn(alias, password).process_login()
 
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
+from src.vista.vista import LoginInView
+
 while (comand := input("test>")) != "exit":
     try:
         exec (comand)
