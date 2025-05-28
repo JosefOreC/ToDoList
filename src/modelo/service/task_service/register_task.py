@@ -32,5 +32,6 @@ class RegisterTask:
     def __save_in_db(self, usuario_tarea):
         try:
             TaskServiceData.insert_task_user(tarea=self.tarea, usuario_tarea=usuario_tarea)
+            return True, 'La tarea se agregó con exito'
         except Exception as E:
             return False, E

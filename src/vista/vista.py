@@ -96,10 +96,10 @@ class LoginInView:
         is_login, response = LoginController.login(alias, password)
 
         if is_login:
-
-            self.root.create_label(name='login_success', text=response, fg='Green')
-        else:
-            self.root.create_label(name='login_success', text=f'LOGIN NO EXITOSO: \n{response}', fg='RED')
+            self.root.limpiar_componentes()
+            MainView(self.root)
+            return
+        self.root.create_label(name='login_success', text=f'{response}', fg='RED')
 
 
 from src.controlador.register_controller import RegisterUserController
@@ -152,25 +152,37 @@ class RegisterUserView:
             self.root.create_button(name='btnAceptarRegistro', text='Aceptar', funcion=self.go_to_login)
 
 
-
     def go_to_login(self):
         self.root.limpiar_componentes()
         LoginInView(self.root)
 
+    def go_to_main(self):
+        self.root.limpiar_componentes()
+        MainView(self.root)
 
+from src.controlador.main_view_controller import MainViewController
 class MainView:
     def __init__(self, root):
         self.root = root
+        self.create_main_interface()
 
     def create_main_interface(self):
-        pass#self.root.create_button(name='btnCrearTarea', text='Crear Tarea', funcion=)
-
+        self.root.create_button(name='btnCrearTarea', text='Crear Tarea', funcion=self.go_to_create_tarea)
+        self.root.create_button(name='btnLogOut', text='Deslogearse', funcion=self.go_to_login)
     def go_to_create_tarea(self):
         self.root.limpiar_componentes()
+        RegisterTareaUserView(self.root)
+    def go_to_login(self):
+        self.root.limpiar_componentes()
+        MainViewController.log_out()
+        LoginInView(self.root)
+
+from src.controlador.register_tarea_controller import RegisterTaskController
 
 class RegisterTareaUserView:
     def __init__(self, root):
         self.root = root
+        self.create_fomulate_tarea()
 
     def create_fomulate_tarea(self):
         self.root.create_label(name='lblNombreCreateTareaUser', text='Nombre: ')
@@ -179,12 +191,32 @@ class RegisterTareaUserView:
         self.root.create_input(name='inpFechaProgramadaCreateTareaUser')
         self.root.create_label(name='lblPrioridadCreateTarea', text='Prioridad: ')
         self.root.create_input(name='inpPrioridadCreateTarea')
-        self.root.create_button(name='btnRegistrarTareaCreateTarea', text='Registrar Tarea')
+        self.root.create_button(name='btnRegistrarTareaCreateTarea', text='Registrar Tarea', funcion=self.btn_registrar_tarea)
 
     def btn_registrar_tarea(self):
         nombre = self.root.componentes.get('inpNombreCreateTareaUser').get()
-        fecha = self.root.componentes.get('inpNombreCreateTareaUser').get()
+        fecha = self.root.componentes.get('inpFechaProgramadaCreateTareaUser').get()
         prioridad = self.root.componentes.get('inpPrioridadCreateTarea').get()
+
+        is_regitered_task, response = RegisterTaskController.event_register_task_user(nombre=nombre,
+                                                                                      fecha=fecha,
+                                                                                      prioridad=prioridad)
+
+        if is_regitered_task:
+            self.root.componentes.get('btnRegistrarTareaCreateTarea').config(state='disabled')
+            if self.root.componentes.get('lblErrorCreateTarea'):
+                self.root.componentes.get('lblErrorCreateTarea').destroy()
+                del(self.root.componentes['lblErrorCreateTarea'])
+            self.root.create_label(name='lblTareaAñadida', text=response, fg='Green')
+            self.root.create_button(name='btnAceptarRegistroCreateTarea', text='Aceptar', funcion = self.btn_aceptar_crear_tarea)
+            return
+
+        self.root.create_label(name='lblErrorCreateTarea', text=response, fg='Red')
+
+    def btn_aceptar_crear_tarea(self):
+        self.root.limpiar_componentes()
+        MainView(self.root)
+
 
 
 

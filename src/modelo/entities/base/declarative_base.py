@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Configurar base de datos SQLite en memoria para las pruebas
-engine = create_engine('sqlite:///D://Py//Todolist//src//modelo//entities//database.db', echo=False)
+engine = create_engine('sqlite:///src//modelo//entities//database.db', echo=False)
 # engine = create_engine('sqlite:///', echo=True)
 Session = sessionmaker(bind=engine)
 
