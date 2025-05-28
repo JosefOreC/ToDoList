@@ -2,7 +2,7 @@
     vista
 """
 import tkinter as tk
-
+from multiprocessing.spawn import set_executable
 
 from src.controlador.login_controller import LoginController
 
@@ -55,10 +55,21 @@ class RootView:
 
         self.componentes[name] = lbl
 
+    def btn_cambiar_secret_input(self, name_input: str, name_button: str):
+        simbolo = '•' if self.componentes.get(name_input).cget('show') == '' else ''
+        self.componentes.get(name_input).config(show=simbolo)
+
+        self.componentes.get(name_button).config(text='Mostrar contraseña' if simbolo == '•'
+                                                else 'Ocultar contraseña')
+
+    def limpiar_componentes(self):
+        for componente in self.componentes:
+            self.componentes[componente].destroy()
+        self.componentes.clear()
+
+
 
 class LoginInView:
-
-    password_ocult = True
 
     def __init__(self, root: RootView):
         self.root = root
@@ -73,18 +84,16 @@ class LoginInView:
     def create_login(self):
         self.root.create_input(name='alias')
         self.root.create_input(name='password', secret=True)
-        self.root.create_button(name='ocult_pass', text='Mostrar contraseña', funcion=self.btn_mostrar_contrasena)
+        self.root.create_button(name='btnOcultarPassLogin', text='Mostrar contraseña', funcion=self.btn_mostrar_contrasena)
         self.root.create_button(name='btnLogin', funcion=self.btn_login, text='Login')
+        self.root.create_button(name='btnRegistrase', funcion=self.go_to_register, text='Registrarse')
+
+    def go_to_register(self):
+        self.root.limpiar_componentes()
+        RegisterUserView(root=self.root)
 
     def btn_mostrar_contrasena(self):
-        self.password_ocult = not self.password_ocult
-        if self.password_ocult:
-            self.root.componentes.get('ocult_pass').config(text='Mostrar contraseña')
-            self.root.componentes.get('password').config(show='•')
-            return
-        self.root.componentes.get('ocult_pass').config(text='Ocultar contraseña')
-        self.root.componentes.get('password').config(show='')
-
+        self.root.btn_cambiar_secret_input(name_input='password', name_button='btnOcultarPassLogin')
 
     def btn_login(self):
         alias = self.root.componentes.get('alias').get()
@@ -98,5 +107,57 @@ class LoginInView:
             self.root.create_label(name='login_success', text=f'LOGIN NO EXITOSO: \n{response}', fg='RED')
 
 
+from src.controlador.register_controller import RegisterUserController
 
+class RegisterUserView:
+    def __init__(self, root):
+        self.root = root
+        self.create_register_interface()
+
+    def create_register_interface(self):
+        self.root.create_label(name='lblNombreRegistro', text='Nombres: ', fg='BLACK')
+        self.root.create_input(name='inpNombreRegistro')
+        self.root.create_label(name='lblApellidoRegistro', text='Apellidos: ')
+        self.root.create_input(name='inpApellidoRegistro')
+        self.root.create_label(name='lblAliasRegistro', text='Alias: ')
+        self.root.create_input(name='inpAliasRegistro')
+        self.root.create_label(name='lblContraseñaRegistro', text='Contraseña: ')
+        self.root.create_input(name='inpContraseñaRegistro', secret=True)
+        self.root.create_button(name='btnVerContraseñaRegistro', text='Mostrar contraseña',
+                                funcion=self.btn_mostrar_contrasena_registro)
+        self.root.create_label(name='lblConfirmarContraseñaRegistro', text='Confirmar Contraseña')
+        self.root.create_input(name='inpConfirmarContraseñaRegistro', secret=True)
+        #self.root.create_button(name='btnVerConfirmarContraseñaRegistro', text='Mostrar contraseña',
+        #                        funcion=self.btn_mostrar_contrasena_confirmacion_registro)
+        self.root.create_button(name='btnRegistrarUsuario', text='Registrarse', funcion=self.btn_registrar_usuario)
+
+    def btn_mostrar_contrasena_registro(self):
+        self.root.btn_cambiar_secret_input(name_input='inpContraseñaRegistro', name_button='btnVerContraseñaRegistro')
+
+    #def btn_mostrar_contrasena_confirmacion_registro(self):
+    #    self.root.btn_cambiar_secret_input(name_input='inpConfirmarContraseñaRegistro',
+    #                                       name_button='btnVerConfirmarContraseñaRegistro')
+
+    def btn_registrar_usuario(self):
+        nombres = self.root.componentes.get('inpNombreRegistro').get()
+        apellidos = self.root.componentes.get('inpApellidoRegistro').get()
+        alias = self.root.componentes.get('inpAliasRegistro').get()
+        password = self.root.componentes.get('inpContraseñaRegistro').get()
+        confirm_password = self.root.componentes.get('inpConfirmarContraseñaRegistro').get()
+        is_user_save, response = RegisterUserController.register_user(nombres=nombres,
+                                             apellidos=apellidos,
+                                             alias=alias,
+                                             password=password,
+                                             confirm_password=confirm_password)
+
+        self.root.create_label(name='lblRegistroSuccess', text=response, fg='Green' if is_user_save else 'Red')
+
+        if is_user_save:
+            self.root.create_button(name='btnAceptarRegistro', text='Aceptar', funcion=self.go_to_login)
+
+
+
+    def go_to_login(self):
+        self.root.limpiar_componentes()
+        LoginInView(self.root)
 

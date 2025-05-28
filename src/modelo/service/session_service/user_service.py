@@ -14,3 +14,11 @@ class UserService:
     def recover_user_for_alias(alias: str):
         return session.query(Usuario).where(Usuario.Alias == alias).first()
 
+    @staticmethod
+    def is_user_with_alias_exits(alias: str):
+        return True if session.query(1).where(Usuario.Alias == alias).all() else False
+
+    @staticmethod
+    def insert_new_user(usuario: Usuario):
+        session.add_all([usuario])
+        session.commit()
