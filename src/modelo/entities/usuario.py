@@ -4,7 +4,7 @@
     para las subclases Operador e Integrante
 """
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship, sessionmaker
 
 from src.modelo.entities.base.declarative_base import Base, engine
@@ -22,7 +22,7 @@ class Usuario(Base):
     Nombres = Column(String(60), nullable=False)
     Apellidos = Column(String(60), nullable=False)
     Alias = Column(String(30), nullable=False)
-    Estado = Column(Integer, nullable=False)
+    Estado = Column(Boolean, default=True)
     Password = Column(String(24))
 
     grupos_relacion = relationship('UsuarioGrupo', back_populates='usuario')

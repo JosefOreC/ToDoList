@@ -10,7 +10,7 @@ class ConnectionDataBase:
     instance = None
 
     def __init__(self):
-        self.__connection = sql.connect('.//src//logica//database_management//todolist_db.db')
+        self.__connection = sql.connect('.//src//controlador//database_management//todolist_db.db')
         self.__cursor = self.__connection.cursor()
 
     @staticmethod
