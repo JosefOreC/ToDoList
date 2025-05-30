@@ -16,6 +16,7 @@ class RootView:
         self.root.config(bg='white')
         self.root.title('TO DO LIST')
 
+
     def __comprobate_existe(self, name):
         if componente := self.componentes.get(name):
             componente.destroy()
@@ -161,6 +162,7 @@ class RegisterUserView:
         MainView(self.root)
 
 from src.controlador.main_view_controller import MainViewController
+from src.controlador.show_task import TaskController
 class MainView:
     def __init__(self, root):
         self.root = root
@@ -169,6 +171,33 @@ class MainView:
     def create_main_interface(self):
         self.root.create_button(name='btnCrearTarea', text='Crear Tarea', funcion=self.go_to_create_tarea)
         self.root.create_button(name='btnLogOut', text='Deslogearse', funcion=self.go_to_login)
+
+    def delete_tasks_labels_buttons(self):
+        for nombre in list(self.root.componentes.keys()):
+            if ('lbl' in nombre or 'btn' in nombre) and 'Task' in nombre:
+                self.root.componentes.get(nombre).destroy()
+                del(self.root.componentes[nombre])
+
+    def create_tasks_view(self):
+        self.delete_tasks_labels_buttons()
+        is_task_recover, response = TaskController.recover_tasks_today()
+
+        if not is_task_recover:
+            self.root.create_label(name='lblNotRecoverTask', text=response, fg='RED')
+            return
+
+        if not response:
+            self.root.create_label(name='lblNoAreTasks', text=response)
+
+        for tarea in response:
+            self.root.create_label(name='lblTaskData',text='\tNombre\t\tRealizado\tFecha\tPrioridad')
+            self.insert_task_view(tarea)
+
+    def insert_task_view(self, tarea):
+        task = tarea[0]
+        nombrelbl = f'lblTask{tarea[0].IDTarea}'
+        texto = f'{tarea[0].Nombre} | {tarea[2]}'
+        self.root.create_label()
     def go_to_create_tarea(self):
         self.root.limpiar_componentes()
         RegisterTareaUserView(self.root)
