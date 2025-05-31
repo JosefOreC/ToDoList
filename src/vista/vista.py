@@ -21,9 +21,9 @@ class RootView:
         if componente := self.componentes.get(name):
             componente.destroy()
 
-    def create_button(self, name: str, funcion, text: str = '', place: [int, int] = 'pack'):
+    def create_button(self, name: str, funcion, text: str = '', place: [int, int] = 'pack', bg='#f0f0f0', fg='black'):
         self.__comprobate_existe(name)
-        bt = tk.Button(self.root, text=text, command=funcion)
+        bt = tk.Button(self.root, text=text, command=funcion, bg=bg, fg=fg)
         if place == 'pack':
             bt.pack()
         else:
@@ -64,6 +64,15 @@ class RootView:
         for componente in self.componentes:
             self.componentes[componente].destroy()
         self.componentes.clear()
+
+    def btn_change_color(self, name_button:str, bg=None, fg=None):
+        try:
+            if bg:
+                self.componentes.get(name_button).config(bg=bg)
+            if fg:
+                self.componentes.get(name_button).config(fg=fg)
+        except Exception as E:
+            return E
 
 class LoginInView:
 
@@ -106,7 +115,7 @@ class LoginInView:
 from src.controlador.register_controller import RegisterUserController
 
 class RegisterUserView:
-    def __init__(self, root):
+    def __init__(self, root: RootView):
         self.root = root
         self.create_register_interface()
 
@@ -162,15 +171,18 @@ class RegisterUserView:
         MainView(self.root)
 
 from src.controlador.main_view_controller import MainViewController
-from src.controlador.show_task import TaskController
 class MainView:
-    def __init__(self, root):
+
+    tareas : list
+
+    def __init__(self, root: RootView):
         self.root = root
         self.create_main_interface()
 
     def create_main_interface(self):
         self.root.create_button(name='btnCrearTarea', text='Crear Tarea', funcion=self.go_to_create_tarea)
         self.root.create_button(name='btnLogOut', text='Deslogearse', funcion=self.go_to_login)
+        self.create_tasks_view()
 
     def delete_tasks_labels_buttons(self):
         for nombre in list(self.root.componentes.keys()):
@@ -180,24 +192,46 @@ class MainView:
 
     def create_tasks_view(self):
         self.delete_tasks_labels_buttons()
-        is_task_recover, response = TaskController.recover_tasks_today()
+        is_task_recover, response = MainViewController.recover_task_today_with_format()
 
         if not is_task_recover:
             self.root.create_label(name='lblNotRecoverTask', text=response, fg='RED')
             return
-
-        if not response:
-            self.root.create_label(name='lblNoAreTasks', text=response)
-
-        for tarea in response:
-            self.root.create_label(name='lblTaskData',text='\tNombre\t\tRealizado\tFecha\tPrioridad')
+        self.tareas = response
+        if not self.tareas:
+            self.root.create_label(name='lblAreNoTasks', text='No hay tareas para hoy :)', fg='Grey')
+            return
+        self.root.create_label(name='lblTaskData', text='\tNombre\t\tFecha\tPrioridad\tRealizado')
+        for tarea in self.tareas:
             self.insert_task_view(tarea)
 
-    def insert_task_view(self, tarea):
-        task = tarea[0]
-        nombrelbl = f'lblTask{tarea[0].IDTarea}'
-        texto = f'{tarea[0].Nombre} | {tarea[2]}'
-        self.root.create_label()
+    def insert_task_view(self, tarea:dict):
+        nombrelbl = f'lblTask{tarea.get('id')}'
+        nombrebtnedit = f'btnEditTask{tarea.get('id')}'
+        nombrebtncomplete = f'btnCheckTask{tarea.get('id')}'
+        texto = f'{tarea.get('nombre')} |\t{tarea.get('fecha')}\t|{tarea.get('prioridad')}'
+        self.root.create_label(name=nombrelbl, text=texto, fg='Black')
+        self.root.create_button(name=nombrebtncomplete, text='Check', bg='Green' if tarea.get('realizado') else 'Red',
+                                funcion=lambda:self.btn_check_task(tarea.get('id'), tarea.get('realizado'),
+                                                                   self.tareas.index(tarea)))
+        self.root.create_button(name=nombrebtnedit, text='Editar Tarea',
+                                funcion=lambda:self.btn_edit_task(tarea.get('id'), self.tareas.index(tarea)))
+
+    def btn_edit_task(self, id_task, indice):
+        pass
+
+    def btn_check_task(self, id_tarea, realizado, indice):
+        print(realizado)
+        realizado = not realizado
+        is_change_task, response = TaskController.event_update_task_session_manager(id_tarea, realizado=realizado)
+        print(realizado, is_change_task, response)
+        if not is_change_task:
+            return
+        self.tareas[indice]['realizado'] = realizado
+        self.root.btn_change_color(f'btnCheckTask{id_tarea}', bg='Green' if realizado else 'Red')
+
+
+
     def go_to_create_tarea(self):
         self.root.limpiar_componentes()
         RegisterTareaUserView(self.root)
@@ -206,7 +240,7 @@ class MainView:
         MainViewController.log_out()
         LoginInView(self.root)
 
-from src.controlador.register_tarea_controller import RegisterTaskController
+from src.controlador.task_controller import TaskController
 
 class RegisterTareaUserView:
     def __init__(self, root):
@@ -214,6 +248,7 @@ class RegisterTareaUserView:
         self.create_fomulate_tarea()
 
     def create_fomulate_tarea(self):
+        self.root.create_button(name='btnVolverCreateTareaUser', text='Volver', funcion=self.btn_volver)
         self.root.create_label(name='lblNombreCreateTareaUser', text='Nombre: ')
         self.root.create_input(name='inpNombreCreateTareaUser')
         self.root.create_label(name='lblFechaProgramadaCreateTareaUser', text='Fecha de accion (dd-mm-aaaa): ')
@@ -227,9 +262,9 @@ class RegisterTareaUserView:
         fecha = self.root.componentes.get('inpFechaProgramadaCreateTareaUser').get()
         prioridad = self.root.componentes.get('inpPrioridadCreateTarea').get()
 
-        is_regitered_task, response = RegisterTaskController.event_register_task_user(nombre=nombre,
-                                                                                      fecha=fecha,
-                                                                                      prioridad=prioridad)
+        is_regitered_task, response = TaskController.event_register_task_user(nombre=nombre,
+                                                                              fecha=fecha,
+                                                                              prioridad=prioridad)
 
         if is_regitered_task:
             self.root.componentes.get('btnRegistrarTareaCreateTarea').config(state='disabled')
@@ -241,6 +276,10 @@ class RegisterTareaUserView:
             return
 
         self.root.create_label(name='lblErrorCreateTarea', text=response, fg='Red')
+
+    def btn_volver(self):
+        self.root.limpiar_componentes()
+        MainView(self.root)
 
     def btn_aceptar_crear_tarea(self):
         self.root.limpiar_componentes()

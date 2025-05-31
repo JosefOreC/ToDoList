@@ -4,14 +4,12 @@
 """
 
 from src.modelo.entities.base.declarative_base import session
-from src.modelo.entities.usuario import Usuario
-from src.modelo.entities.usuario_grupo import UsuarioGrupo
 from src.modelo.entities.usuario_tarea import UsuarioTarea
-from src.modelo.entities.grupo import Grupo
 from src.modelo.entities.tarea import Tarea
 from src.modelo.service.session_service.session_manager import SessionManager
-from src.modelo.format_data import DataFormat, datetime
-from datetime import date, timedelta
+from src.modelo.service.data_service.data_format import DataFormat
+from datetime import date
+from src.modelo.service.task_service.update_task import UpdateTask
 
 class TaskServiceData:
     @staticmethod
@@ -21,6 +19,28 @@ class TaskServiceData:
         usuario_tarea.IDTarea = tarea.IDTarea
         session.add_all([usuario_tarea])
         session.commit()
+
+    @staticmethod
+    def update_task_user(id_usuario, id_tarea, nombre = None, activo = None,
+                         fecha = None, prioridad = None, disponible = None,
+                         realizado = None):
+
+        updatedata = UpdateTask(id_tarea, id_usuario)
+
+        if nombre:
+            updatedata.update_name(nombre)
+        if activo:
+            updatedata.update_activo(activo)
+        if fecha:
+            updatedata.update_fecha(fecha)
+        if prioridad:
+            updatedata.update_prioridad(prioridad)
+        if disponible != None:
+            updatedata.update_disponible(disponible)
+        if realizado != None:
+            updatedata.update_realizado(realizado)
+
+        updatedata.do_changes()
 
     @staticmethod
     def get_tasks_user_list_date(usuario_id: int, fecha_inicio: str or date, fecha_fin: str or date = None):
@@ -50,3 +70,7 @@ class TaskServiceData:
     def get_tasks_session_user_list_today():
         fecha = date.today()
         return TaskServiceData.get_tasks_session_user_list_date(fecha)
+
+
+
+
