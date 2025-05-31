@@ -3,7 +3,7 @@
 """
 
 from src.modelo.service.session_service.session_manager import SessionManager
-from src.modelo.service.session_service.user_service import UserService
+from src.modelo.service.user_service.user_service_data import UserService
 
 class LoginIn:
 
@@ -22,9 +22,6 @@ class LoginIn:
         SessionManager.log_out()
         return False, "CONTRASEÑA INCORRECTA"
 
-    @staticmethod
-    def event_login(alias, password):
-        return LoginIn(alias, password).process_login()
 
 
 if __name__ == "__main__":

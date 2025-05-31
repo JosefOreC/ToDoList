@@ -5,7 +5,7 @@
 """
 
 from src.modelo.entities.usuario import Usuario
-from src.modelo.service.session_service.user_service import UserService
+from src.modelo.service.user_service.user_service_data import UserService
 
 
 class RegisterUser:

@@ -18,12 +18,15 @@ class DataFormat:
         response = []
 
         for tarea, dis, rea in tareas:
+            if not tarea.Activo:
+                continue
             summary = {'id': tarea.IDTarea,
                        'nombre': tarea.Nombre,
                        'disponible': dis,
                        'realizado': rea,
                        'fecha': tarea.Fecha_programada,
-                       'prioridad': tarea.Prioridad}
+                       'prioridad': tarea.Prioridad,
+                       'activo': tarea.Activo}
             response.append(summary)
 
         return response

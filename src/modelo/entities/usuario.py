@@ -23,7 +23,7 @@ class Usuario(Base):
     Apellidos = Column(String(60), nullable=False)
     Alias = Column(String(30), nullable=False)
     Estado = Column(Boolean, default=True)
-    Password = Column(String(24))
+    Password = Column(String(100))
 
     grupos_relacion = relationship('UsuarioGrupo', back_populates='usuario')
 

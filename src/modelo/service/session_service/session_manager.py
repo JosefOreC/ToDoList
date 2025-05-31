@@ -3,6 +3,7 @@
 """
 
 from src.modelo.entities.usuario import Usuario
+import bcrypt
 
 class SessionManager:
     """
@@ -38,10 +39,9 @@ class SessionManager:
     def get_password(self):
         return self.usuario.Password
 
-    def validar_usuario(self, password):
-        if self.usuario and self.usuario.Password == password:
-            return True
-        return False
+    def validar_usuario(self, password: str) -> bool:
+        return bcrypt.checkpw(password.encode('utf-8'), self.usuario.Password.encode('utf-8'))
+
 
 if __name__ == "__main__":
     pass

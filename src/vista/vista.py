@@ -221,10 +221,10 @@ class MainView:
         pass
 
     def btn_check_task(self, id_tarea, realizado, indice):
-        print(realizado)
+
         realizado = not realizado
         is_change_task, response = TaskController.event_update_task_session_manager(id_tarea, realizado=realizado)
-        print(realizado, is_change_task, response)
+
         if not is_change_task:
             return
         self.tareas[indice]['realizado'] = realizado
