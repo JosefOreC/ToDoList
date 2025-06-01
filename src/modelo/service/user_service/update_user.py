@@ -1,6 +1,13 @@
-from src.modelo.entities.base.declarative_base import session
+"""
+    Clase que controla los datos de un usuario para ser actualizado
+    no se relaciona directamente con la base de datos.
+"""
+
+from src.modelo.database_management.base.declarative_base import session
 from src.modelo.entities.modelo import Usuario, UsuarioGrupo
 import bcrypt
+
+
 
 
 class UpdateUser:
@@ -21,8 +28,6 @@ class UpdateUser:
         usuario_grupo = session.query(UsuarioGrupo).filter_by(IDGrupo=id_grupo,
                                                               IDUsuario=id_usuario)
         usuario_grupo.rol = rol
-        UpdateUser.do_changes()
-
 
     def update_estado(self, estado):
         self.__usuario.Estado = estado
@@ -39,7 +44,3 @@ class UpdateUser:
     def update_password(self, password):
         new_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         self.__usuario.Password = new_password
-
-    @staticmethod
-    def do_changes():
-        session.commit()

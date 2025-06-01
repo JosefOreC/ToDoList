@@ -5,7 +5,7 @@
 """
 
 from src.modelo.entities.usuario import Usuario
-from src.modelo.service.user_service.user_service_data import UserService
+from src.modelo.service.user_service.user_service_data import UserServiceData
 
 
 class RegisterUser:
@@ -15,7 +15,7 @@ class RegisterUser:
 
     def register_user(self):
 
-        if UserService.is_user_with_alias_exits(self.usuario.Alias):
+        if UserServiceData.is_user_with_alias_exits(self.usuario.Alias):
             return False, 'Alias ocupado.'
 
         try:
@@ -26,7 +26,7 @@ class RegisterUser:
         return True, "SE GUARDÓ AL NUEVO USUARIO"
 
     def save_in_db(self):
-        UserService.insert_new_user(self.usuario)
+        UserServiceData.insert_new_user(self.usuario)
 
 
 if __name__ == "__main__":

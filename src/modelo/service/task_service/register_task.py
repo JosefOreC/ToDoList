@@ -1,4 +1,5 @@
 """
+    Clase que se ocupa de la creación de una tarea y su subida a la base de datos.
 
 """
 

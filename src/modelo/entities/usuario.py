@@ -4,10 +4,10 @@
     para las subclases Operador e Integrante
 """
 
-from sqlalchemy import Column, Integer, String, Boolean
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import Column, Integer, String, Boolean, UniqueConstraint
+from sqlalchemy.orm import relationship
 
-from src.modelo.entities.base.declarative_base import Base, engine
+from src.modelo.database_management.base.declarative_base import Base
 
 
 class Usuario(Base):
@@ -31,6 +31,9 @@ class Usuario(Base):
 
     usuario_tareas = relationship('UsuarioTarea', back_populates='usuario')
 
+    __table_args__ = (
+        UniqueConstraint('Alias', name='uq_alias_usuario'),
+    )
 
 if __name__ == "__main__":
     pass

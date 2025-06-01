@@ -1,9 +1,9 @@
 """
-
-
+    Clase que controla la entidad tarea y relacionados
+    desde la base de datos CRUD.
 """
 
-from src.modelo.entities.base.declarative_base import session
+from src.modelo.database_management.base.declarative_base import session
 from src.modelo.entities.usuario_tarea import UsuarioTarea
 from src.modelo.entities.tarea import Tarea
 from src.modelo.service.session_service.session_manager import SessionManager
@@ -40,7 +40,8 @@ class TaskServiceData:
         if realizado != None:
             updatedata.update_realizado(realizado)
 
-        updatedata.do_changes()
+        session.commit()
+
 
     @staticmethod
     def get_tasks_user_list_date(usuario_id: int, fecha_inicio: str or date, fecha_fin: str or date = None):

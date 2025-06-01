@@ -3,8 +3,8 @@
 
 """
 
-from src.modelo.entities.base.declarative_base import Base
-from sqlalchemy import Integer, ForeignKey, Column, Enum, UniqueConstraint
+from src.modelo.database_management.base.declarative_base import Base
+from sqlalchemy import Integer, ForeignKey, Column, Enum
 from sqlalchemy.orm import relationship
 from src.modelo.entities.rol import Rol
 

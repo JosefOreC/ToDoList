@@ -1,6 +1,11 @@
+"""
+    Controla los datos de una tarea para su actualización
+    no se involucra con la base de datos.
+"""
+
 from src.modelo.entities.usuario_tarea import UsuarioTarea
 from src.modelo.entities.tarea import Tarea
-from src.modelo.entities.base.declarative_base import session
+from src.modelo.database_management.base.declarative_base import session
 
 class UpdateTask:
     def __init__(self, id_tarea, id_usuario):
@@ -31,8 +36,5 @@ class UpdateTask:
 
     def update_realizado(self, realizado):
         self.__usuario_tarea.Realizado = realizado
-
-    def do_changes(self):
-        session.commit()
 
 

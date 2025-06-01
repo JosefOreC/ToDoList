@@ -1,7 +1,6 @@
 from src.modelo.service.session_service.session_manager import SessionManager
-from src.modelo.service.task_service.task_service_data import TaskServiceData
 from src.modelo.entities.tarea import Tarea
-from src.modelo.service.task_service.register_task import RegisterTask
+from src.modelo.service.task_service.register_task import RegisterTask, TaskServiceData
 from src.modelo.service.data_service.data_format import DataFormat
 
 class TaskController:

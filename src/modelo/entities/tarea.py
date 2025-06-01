@@ -7,7 +7,7 @@
 from sqlalchemy import Column, Boolean, String, Integer, DATE
 from sqlalchemy.orm import relationship
 
-from src.modelo.entities.base.declarative_base import Base
+from src.modelo.database_management.base.declarative_base import Base
 
 class Tarea(Base):
     __tablename__ = "Tarea"

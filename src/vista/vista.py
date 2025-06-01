@@ -74,6 +74,9 @@ class RootView:
         except Exception as E:
             return E
 
+    def cerrar_ventana(self):
+        self.root.destroy()
+
 class LoginInView:
 
     def __init__(self, root: RootView):

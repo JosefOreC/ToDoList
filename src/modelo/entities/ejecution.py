@@ -1,4 +1,4 @@
-from base.declarative_base import Base, engine
+from src.modelo.database_management.base.declarative_base import Base, engine
 from sqlalchemy.orm import sessionmaker
 from usuario_tarea import UsuarioTarea
 from tarea import Tarea

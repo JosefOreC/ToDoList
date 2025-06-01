@@ -3,8 +3,8 @@
 """
 from sqlalchemy.orm import relationship
 
-from src.modelo.entities.base.declarative_base import Base
-from sqlalchemy import Column, ForeignKey, Integer, String, Boolean
+from src.modelo.database_management.base.declarative_base import Base
+from sqlalchemy import Column, ForeignKey, Integer, Boolean
 
 class UsuarioTarea(Base):
     __tablename__ = 'UsuarioTarea'
