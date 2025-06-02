@@ -394,8 +394,8 @@ class RegisterTareaUserView:
         form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         form_frame.pack()
 
-        labels_texts = ['Nombre de la Tarea:', 'Fecha (dd-mm-aaaa):', 'Prioridad (1-5):']
-        inputs_names = ['inpNombreCreateTareaUser', 'inpFechaProgramadaCreateTareaUser', 'inpPrioridadCreateTarea']
+        labels_texts = ['Nombre de la Tarea:', 'Fecha (dd-mm-aaaa):', 'Prioridad (1-5):', 'Detalle:']
+        inputs_names = ['inpNombreCreateTareaUser', 'inpFechaProgramadaCreateTareaUser', 'inpPrioridadCreateTarea', 'inpDetalleCreateTarea']
 
         for i, text in enumerate(labels_texts):
             lbl = tk.Label(form_frame, text=text, font=self.root.FONT_LABEL, bg=form_frame.cget('bg'),
@@ -416,9 +416,9 @@ class RegisterTareaUserView:
         nombre = self.root.componentes.get('inpNombreCreateTareaUser').get()
         fecha = self.root.componentes.get('inpFechaProgramadaCreateTareaUser').get()
         prioridad = self.root.componentes.get('inpPrioridadCreateTarea').get()
-
+        detalle = self.root.componentes.get('inpDetalleCreateTarea').get()
         is_registered_task, response = TaskController.event_register_task_user(
-            nombre=nombre, fecha=fecha, prioridad=prioridad)
+            nombre=nombre, fecha=fecha, prioridad=prioridad, detalle= detalle)
 
         container = self.root.componentes.get('btnRegistrarTareaCreateTarea').master
         color = self.root.COLOR_SUCCESS if is_registered_task else self.root.COLOR_DANGER

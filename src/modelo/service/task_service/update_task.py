@@ -37,4 +37,7 @@ class UpdateTask:
     def update_realizado(self, realizado):
         self.__usuario_tarea.Realizado = realizado
 
+    def update_detalle(self, detalle):
+        self.__tarea.Detalle = detalle
+
 

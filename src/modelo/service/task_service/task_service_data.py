@@ -23,7 +23,7 @@ class TaskServiceData:
     @staticmethod
     def update_task_user(id_usuario, id_tarea, nombre = None, activo = None,
                          fecha = None, prioridad = None, disponible = None,
-                         realizado = None):
+                         realizado = None, detalle = None):
 
         updatedata = UpdateTask(id_tarea, id_usuario)
 
@@ -39,6 +39,8 @@ class TaskServiceData:
             updatedata.update_disponible(disponible)
         if realizado != None:
             updatedata.update_realizado(realizado)
+        if detalle:
+            updatedata.update_detalle(detalle)
 
         session.commit()
 

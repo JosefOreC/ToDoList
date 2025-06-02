@@ -17,6 +17,7 @@ class Tarea(Base):
     Activo = Column(Boolean, default=True)
     Fecha_programada = Column(DATE)
     Prioridad = Column(Integer)
+    Detalle = Column(String(500))
 
     tarea_usuarios = relationship('UsuarioTarea', back_populates='tarea')
 
