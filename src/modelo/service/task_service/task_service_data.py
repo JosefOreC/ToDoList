@@ -12,11 +12,12 @@ from src.modelo.service.task_service.update_task import UpdateTask
 
 class TaskServiceData:
     @staticmethod
-    def insert_task_user(tarea: Tarea, usuario_tarea: UsuarioTarea):
+    def insert_task_user(tarea: Tarea, usuario_tarea: list[UsuarioTarea]):
         session.add_all([tarea])
         session.flush()
-        usuario_tarea.IDTarea = tarea.IDTarea
-        session.add_all([usuario_tarea])
+        for relacion in usuario_tarea:
+            relacion.IDTarea = tarea.IDTarea
+        session.add_all(usuario_tarea)
         session.commit()
 
     @staticmethod
@@ -34,9 +35,9 @@ class TaskServiceData:
             updatedata.update_fecha(fecha)
         if prioridad:
             updatedata.update_prioridad(prioridad)
-        if disponible != None:
+        if disponible is not None:
             updatedata.update_disponible(disponible)
-        if realizado != None:
+        if realizado is not None:
             updatedata.update_realizado(realizado)
         if detalle:
             updatedata.update_detalle(detalle)
