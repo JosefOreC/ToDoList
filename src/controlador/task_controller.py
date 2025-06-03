@@ -68,11 +68,15 @@ class TaskController:
                                                      realizado)
     @staticmethod
     def event_register_task_group(id_grupo, nombre: str, fecha: str, prioridad: int, detalle: str,
-                                  miembros_rol: list[str, str] = 'all'): #lista (alias, disponible)
+                                  miembros_disponible: list[[int, bool]] = 'all'): #lista (alias, disponible)
         is_tarea_create, response = TaskController.__create_tarea(nombre,fecha,prioridad,detalle)
 
         if not  is_tarea_create:
             return is_tarea_create, response
+
+        return RegisterTask(tarea=response, id_grupo=id_grupo,miembro_disponible=miembros_disponible).register_task()
+
+
 
 
 
