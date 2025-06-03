@@ -1,5 +1,6 @@
 from src.modelo.entities.tarea import Tarea
 from datetime import datetime, date
+from src.modelo.service.group_service.group_service_data import GroupServiceData as gsd
 
 class DataFormat:
     @staticmethod
@@ -14,19 +15,23 @@ class DataFormat:
             raise ValueError("Formato de fecha no soportado")
 
     @staticmethod
-    def summarize_task_data_main_view(tareas: [Tarea, bool, bool]):
+    def convert_to_dict_task_data(tareas: [Tarea, bool, bool, int]):
         response = []
 
-        for tarea, dis, rea in tareas:
+        for tarea, dis, rea, grupo in tareas:
             if not tarea.Activo:
                 continue
+            grupo = gsd.get_data_task_group_name(grupo)
             summary = {'id': tarea.IDTarea,
                        'nombre': tarea.Nombre,
                        'disponible': dis,
                        'realizado': rea,
                        'fecha': tarea.Fecha_programada,
                        'prioridad': tarea.Prioridad,
-                       'activo': tarea.Activo}
+                       'activo': tarea.Activo,
+                       'detalle': tarea.Detalle,
+                       'grupo': grupo
+                       }
             response.append(summary)
 
         return response

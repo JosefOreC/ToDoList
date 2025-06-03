@@ -4,8 +4,7 @@
 """
 
 from src.modelo.database_management.base.declarative_base import session
-from src.modelo.entities.usuario_tarea import UsuarioTarea
-from src.modelo.entities.tarea import Tarea
+from src.modelo.entities.modelo import UsuarioTarea, Tarea, Grupo
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.service.data_service.data_format import DataFormat
 from datetime import date
@@ -58,11 +57,12 @@ class TaskServiceData:
                             f'\nNo se recuperó datos.')
         resultados = session.query(Tarea,
                                    UsuarioTarea.Disponible,
-                                   UsuarioTarea.Realizado).join(UsuarioTarea,
+                                   UsuarioTarea.Realizado, UsuarioTarea.IDGrupo).join(UsuarioTarea,
                                    UsuarioTarea.IDUsuario==usuario_id).filter(UsuarioTarea.IDTarea==Tarea.IDTarea,
                                    Tarea.Fecha_programada >= fecha_inicio,
                                    Tarea.Fecha_programada <= fecha_fin).order_by(Tarea.Prioridad.asc()).all()
         return resultados
+
 
     @staticmethod
     def get_tasks_session_user_list_date(fecha: str or date):
@@ -71,8 +71,8 @@ class TaskServiceData:
 
     @staticmethod
     def get_tasks_session_user_list_today():
-        fecha = date.today()
-        return TaskServiceData.get_tasks_session_user_list_date(fecha)
+        return TaskServiceData.get_tasks_session_user_list_date(date.today())
+
 
 
 

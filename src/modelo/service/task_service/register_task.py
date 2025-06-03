@@ -10,16 +10,17 @@ from src.modelo.entities.usuario import Usuario
 from src.modelo.entities.usuario_tarea import UsuarioTarea
 
 class RegisterTask:
-    def __init__(self, tarea: Tarea, id_grupo: str = None, users_grupo_disponible: list[[Usuario.IDUsuario, bool]] = None):
+
+    def __init__(self, tarea: Tarea, id_grupo: str = None, miembro_disponible: list[list[int, bool]] = None):
         self.tarea = tarea
         self.id_grupo = id_grupo
-        #if id_grupo:
-        #    if users_grupo_disponile == 'all':
-        #        self.users_grupo = [funcion_recuperacion_datos_id_user_grupo]
-
+        if id_grupo:
+            if  miembro_disponible== 'all':
+                self.users_grupo = miembro_disponible
 
     def __register_task_group(self):
-        pass
+        for miembro, disponible in self.users_grupo:
+            self.relaciones
 
     def __register_task_user(self, id_user, id_group = None, disponible: bool = True):
         usuario_tarea = UsuarioTarea(IDUsuario=id_user, IDGrupo=id_group, Disponible=disponible)

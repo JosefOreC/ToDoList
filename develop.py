@@ -9,11 +9,16 @@ import threading
 
 if __name__ == '__main__':
 
-    Thread(target=LoginInView.independent_login).start()
 
-    while (comand := input("test>")) != "exit":
-        try:
-            exec(comand)
-        except Exception as E:
-            print(E)
+    def develop():
+        while (comand := input("test>")) != "exit":
+            try:
+                exec(comand)
+            except Exception as E:
+                print(E)
+
+
+    Thread(target=develop).start()
+    LoginInView.independent_login()
+
 

@@ -2,13 +2,16 @@
     vista
 """
 import tkinter as tk
-from tkinter import font
+
 
 # Importaciones de tus controladores (asegúrate de que las rutas sean correctas)
 from src.controlador.login_controller import LoginController
 from src.controlador.register_controller import RegisterUserController
 from src.controlador.main_view_controller import MainViewController
 from src.controlador.task_controller import TaskController
+# --- IMPORTACIONES NUEVAS ---
+from src.controlador.group_controller import GroupController
+from src.controlador.user_controller import UserController
 
 
 class RootView:
@@ -34,7 +37,7 @@ class RootView:
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.geometry("700x550")
+        self.root.geometry("850x600")  # Aumentamos el tamaño para la nueva columna
         self.root.config(bg=self.COLOR_BACKGROUND)
         self.root.title('TO-DO LIST | By Gemini')
         self.center_window()
@@ -117,38 +120,31 @@ class LoginInView:
     def __init__(self, root: RootView):
         self.root = root
         self.create_login()
-        # self.root.main() # No es necesario llamarlo aquí, se llama al final
 
     @staticmethod
     def independent_login():
         root = RootView()
         login_view = LoginInView(root)
-        root.main()  # Se llama aquí para iniciar la aplicación
+        root.main()
         return login_view
 
     def create_login(self):
-        """Crea la interfaz de inicio de sesión centrada y con estilo."""
         self.root.limpiar_componentes()
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
         main_frame.pack(expand=True)
 
         self.root.create_label(main_frame, name='lblLoginTitle', text='Inicio de Sesión',
                                font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
-
         self.root.create_label(main_frame, name='lblAliasLogin', text='Alias de Usuario',
                                font_style=self.root.FONT_LABEL, pack_info={'pady': (10, 0), 'anchor': 'w'})
         self.root.create_input(main_frame, name='alias')
-
         self.root.create_label(main_frame, name='lblPasswordLogin', text='Contraseña',
                                font_style=self.root.FONT_LABEL, pack_info={'pady': (10, 0), 'anchor': 'w'})
         self.root.create_input(main_frame, name='password', secret=True)
-
         self.root.create_button(main_frame, name='btnOcultarPassLogin', text='Mostrar',
                                 funcion=self.btn_mostrar_contrasena, bg='#6C757D',
                                 pack_info={'pady': 5, 'ipadx': 10, 'ipady': 2, 'anchor': 'e'})
-
         self.root.create_button(main_frame, name='btnLogin', funcion=self.btn_login, text='Ingresar')
-
         self.root.create_label(main_frame, name='lblGoToRegister', text='¿No tienes una cuenta?')
         self.root.create_button(main_frame, name='btnRegistrase', funcion=self.go_to_register,
                                 text='Regístrate Aquí', bg=self.root.COLOR_SUCCESS)
@@ -168,7 +164,6 @@ class LoginInView:
             MainView(self.root)
             return
 
-        # Etiqueta de error
         container = self.root.componentes.get('btnLogin').master
         self.root.create_label(container, name='login_error', text=response,
                                fg=self.root.COLOR_DANGER, font_style=(self.root.FONT_BODY[0], 10, "italic"))
@@ -180,33 +175,25 @@ class RegisterUserView:
         self.create_register_interface()
 
     def create_register_interface(self):
-        """Crea la interfaz de registro con un formulario bien alineado."""
         self.root.limpiar_componentes()
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
         main_frame.pack(expand=True)
-
         self.root.create_label(main_frame, name='lblRegisterTitle', text='Crear Cuenta',
                                font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
-
-        # Usamos grid para alinear etiquetas y entradas
         form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         form_frame.pack()
-
         labels_texts = ['Nombres:', 'Apellidos:', 'Alias:', 'Contraseña:', 'Confirmar Contraseña:']
         inputs_names = ['inpNombreRegistro', 'inpApellidoRegistro', 'inpAliasRegistro',
                         'inpContraseñaRegistro', 'inpConfirmarContraseñaRegistro']
-
         for i, text in enumerate(labels_texts):
             lbl = tk.Label(form_frame, text=text, font=self.root.FONT_LABEL, bg=form_frame.cget('bg'),
                            fg=self.root.COLOR_TEXT_DARK)
             lbl.grid(row=i, column=0, sticky='w', pady=5, padx=5)
-
             is_secret = 'Contraseña' in text
             inp = tk.Entry(form_frame, show='•' if is_secret else '', font=self.root.FONT_BODY,
                            bg=self.root.COLOR_BACKGROUND, fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
             inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5, ipady=4)
             self.root.componentes[inputs_names[i]] = inp
-
         self.root.create_button(main_frame, name='btnRegistrarUsuario', text='Registrarse',
                                 funcion=self.btn_registrar_usuario, bg=self.root.COLOR_SUCCESS)
         self.root.create_button(main_frame, name='btnRegresarLogin', text='Volver al Inicio',
@@ -218,16 +205,12 @@ class RegisterUserView:
         alias = self.root.componentes.get('inpAliasRegistro').get()
         password = self.root.componentes.get('inpContraseñaRegistro').get()
         confirm_password = self.root.componentes.get('inpConfirmarContraseñaRegistro').get()
-
         is_user_save, response = RegisterUserController.register_user(
             nombres=nombres, apellidos=apellidos, alias=alias,
             password=password, confirm_password=confirm_password)
-
         container = self.root.componentes.get('btnRegistrarUsuario').master
         color = self.root.COLOR_SUCCESS if is_user_save else self.root.COLOR_DANGER
-
         self.root.create_label(container, name='lblRegistroSuccess', text=response, fg=color)
-
         if is_user_save:
             self.root.componentes.get('btnRegistrarUsuario').config(state='disabled')
             self.root.create_button(container, name='btnAceptarRegistro', text='Aceptar',
@@ -245,36 +228,37 @@ class MainView:
         self.create_main_interface()
 
     def create_main_interface(self):
-        """Crea la interfaz principal con cabecera y lista de tareas."""
         self.root.limpiar_componentes()
-
-        # --- Cabecera ---
         header_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=20, pady=10)
         header_frame.pack(fill='x')
 
         self.root.create_button(header_frame, name='btnCrearTarea', text='✚ Nueva Tarea',
                                 funcion=self.go_to_create_tarea, bg=self.root.COLOR_PRIMARY,
                                 pack_info={'side': 'left', 'padx': 10})
+        # --- NUEVO BOTÓN PARA GRUPOS ---
+        self.root.create_button(header_frame, name='btnCrearGrupo', text='✚ Nuevo Grupo',
+                                funcion=self.go_to_create_group, bg=self.root.COLOR_SUCCESS,
+                                pack_info={'side': 'left', 'padx': 10})
+        # --- NUEVO BOTÓN PARA PERFIL ---
+        self.root.create_button(header_frame, name='btnMiPerfil', text='Mi Perfil',
+                                funcion=self.go_to_profile, bg='#6C757D',
+                                pack_info={'side': 'right', 'padx': 10})
         self.root.create_button(header_frame, name='btnLogOut', text='Cerrar Sesión',
                                 funcion=self.go_to_login, bg=self.root.COLOR_DANGER,
                                 pack_info={'side': 'right', 'padx': 10})
 
-        # --- Contenedor de Tareas ---
         self.tasks_container = tk.Frame(self.root.root, bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
         self.tasks_container.pack(fill='both', expand=True)
-
         self.root.create_label(self.tasks_container, name='lblTasksTitle', text='Tareas para Hoy',
                                font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
         self.create_tasks_view()
 
     def create_tasks_view(self):
-        """Obtiene y muestra las tareas en la interfaz."""
         for widget in self.tasks_container.winfo_children():
-            if 'Task' in widget.winfo_name() or 'NoTasks' in widget.winfo_name():
+            if 'Task' in widget.winfo_name() or 'NoTasks' in widget.winfo_name() or 'task_header' in widget.winfo_name():
                 widget.destroy()
 
         is_task_recover, response = MainViewController.recover_task_today_with_format()
-
         if not is_task_recover:
             self.root.create_label(self.tasks_container, name='lblNoTasksError', text=response,
                                    fg=self.root.COLOR_DANGER)
@@ -287,52 +271,53 @@ class MainView:
                                    fg='#6C757D', font_style=("Helvetica", 14, "italic"))
             return
 
-        task_header = tk.Frame(self.tasks_container, bg=self.tasks_container.cget('bg'))
+        task_header = tk.Frame(self.tasks_container, name='task_header', bg=self.tasks_container.cget('bg'))
         task_header.pack(fill='x', pady=(0, 10))
-        headers = ['Nombre', 'Fecha', 'Prioridad', 'Acciones']
+        # --- ENCABEZADO ACTUALIZADO CON GRUPO ---
+        headers = ['Nombre', 'Grupo', 'Fecha', 'Prioridad', 'Acciones']
+        col_weights = [3, 2, 2, 1, 2]  # Pesos para el ancho de las columnas
         for i, h in enumerate(headers):
-            tk.Label(task_header, text=h, font=self.root.FONT_LABEL, bg=task_header.cget('bg')).pack(side='left',
-                                                                                                     expand=True)
+            task_header.grid_columnconfigure(i, weight=col_weights[i])
+            tk.Label(task_header, text=h, font=self.root.FONT_LABEL, bg=task_header.cget('bg')).grid(row=0, column=i,
+                                                                                                     sticky='ew')
 
         for i, tarea in enumerate(self.tareas):
             self.insert_task_view(tarea, i)
 
     def insert_task_view(self, tarea: dict, index: int):
-        """Inserta una única fila de tarea con un diseño moderno."""
         task_id = tarea.get('id')
-
         task_frame = tk.Frame(self.tasks_container, name=f'frameTask{task_id}',
                               bg=self.root.COLOR_FRAME, relief='solid', borderwidth=1, padx=10, pady=10)
         task_frame.pack(fill='x', pady=5)
 
-        info_text = f"{tarea.get('nombre')}"
-        info_fecha = f"{tarea.get('fecha')}"
-        info_prioridad = f"Prioridad: {tarea.get('prioridad')}"
+        col_weights = [3, 2, 2, 1, 2]  # Pesos consistentes con el header
+        for i in range(len(col_weights)):
+            task_frame.grid_columnconfigure(i, weight=col_weights[i])
 
-        tk.Label(task_frame, text=info_text, font=self.root.FONT_BODY, bg=task_frame.cget('bg')).pack(side='left',
-                                                                                                      expand=True,
-                                                                                                      anchor='w')
-        tk.Label(task_frame, text=info_fecha, font=self.root.FONT_BODY, bg=task_frame.cget('bg')).pack(side='left',
-                                                                                                       expand=True)
-        tk.Label(task_frame, text=info_prioridad, font=self.root.FONT_BODY, bg=task_frame.cget('bg')).pack(side='left',
-                                                                                                           expand=True)
+        # --- MOSTRANDO DATOS CON GRID PARA ALINEACIÓN ---
+        tk.Label(task_frame, text=tarea.get('nombre'), font=self.root.FONT_BODY, bg=task_frame.cget('bg')).grid(row=0,
+                                                                                                                column=0,
+                                                                                                                sticky='w')
+        tk.Label(task_frame, text=tarea.get('grupo', 'N/A'), font=self.root.FONT_BODY, bg=task_frame.cget('bg')).grid(
+            row=0, column=1, sticky='w')
+        tk.Label(task_frame, text=tarea.get('fecha'), font=self.root.FONT_BODY, bg=task_frame.cget('bg')).grid(row=0,
+                                                                                                               column=2,
+                                                                                                               sticky='w')
+        tk.Label(task_frame, text=f"Prioridad: {tarea.get('prioridad')}", font=self.root.FONT_BODY,
+                 bg=task_frame.cget('bg')).grid(row=0, column=3, sticky='w')
 
         actions_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
-        actions_frame.pack(side='left', expand=True)
+        actions_frame.grid(row=0, column=4, sticky='e')
 
         realizado = tarea.get('realizado')
         check_bg = self.root.COLOR_SUCCESS if realizado else self.root.COLOR_DANGER
         check_text = '✔' if realizado else '✖'
-
-        # --- CAMBIO IMPORTANTE AQUÍ ---
-        # La lambda ahora solo pasa el id y el índice, no el estado 'realizado'
         btn_check = tk.Button(actions_frame, name=f'btnCheckTask{task_id}', text=check_text,
                               bg=check_bg, fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON,
                               relief='flat', cursor="hand2",
                               command=lambda id=task_id, idx=index: self.btn_check_task(id, idx))
         btn_check.pack(side='left', padx=5)
         self.root.componentes[f'btnCheckTask{task_id}'] = btn_check
-
         btn_edit = tk.Button(actions_frame, name=f'btnEditTask{task_id}', text='Editar',
                              bg='#6C757D', fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON,
                              relief='flat', cursor="hand2",
@@ -340,23 +325,12 @@ class MainView:
         btn_edit.pack(side='left', padx=5)
         self.root.componentes[f'btnEditTask{task_id}'] = btn_edit
 
-    # --- CAMBIO IMPORTANTE AQUÍ ---
-    # La función ahora busca el estado actual antes de cambiarlo
     def btn_check_task(self, id_tarea, indice):
-        # 1. Obtener el estado actual de la tarea desde nuestra lista de datos
         estado_actual = self.tareas[indice]['realizado']
-
-        # 2. Calcular el nuevo estado
         nuevo_estado = not estado_actual
-
-        # 3. Llamar al controlador para actualizar el backend
         is_change_task, response = TaskController.event_update_task_session_manager(id_tarea, realizado=nuevo_estado)
-
         if not is_change_task:
-            # Si hay un error en el backend, no hacemos cambios en la UI
             return
-
-        # 4. Actualizar el estado en la lista local y la apariencia del botón
         self.tareas[indice]['realizado'] = nuevo_estado
         btn_check = self.root.componentes.get(f'btnCheckTask{id_tarea}')
         if btn_check:
@@ -375,6 +349,132 @@ class MainView:
         MainViewController.log_out()
         LoginInView(self.root)
 
+    # --- NUEVAS FUNCIONES DE NAVEGACIÓN ---
+    def go_to_create_group(self):
+        GroupRegisterView(self.root)
+
+    def go_to_profile(self):
+        ProfileView(self.root)
+
+
+# --- NUEVA CLASE: VISTA DE REGISTRO DE GRUPOS ---
+class GroupRegisterView:
+    def __init__(self, root: RootView):
+        self.root = root
+        self.create_group_form()
+
+    def create_group_form(self):
+        self.root.limpiar_componentes()
+        main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
+        main_frame.pack(expand=True)
+        self.root.create_label(main_frame, 'lblGroupTitle', 'Registrar Nuevo Grupo',
+                               font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
+
+        form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
+        form_frame.pack(fill='x')
+
+        self.root.create_label(form_frame, 'lblGroupName', 'Nombre del Grupo:', font_style=self.root.FONT_LABEL,
+                               pack_info={'anchor': 'w'})
+        self.root.create_input(form_frame, 'inpGroupName')
+
+        self.root.create_label(form_frame, 'lblGroupDesc', 'Descripción (Opcional):', font_style=self.root.FONT_LABEL,
+                               pack_info={'anchor': 'w', 'pady': (10, 0)})
+        self.root.create_input(form_frame, 'inpGroupDesc')
+
+        # DENTRO DE create_group_form
+        self.root.create_button(main_frame,
+                                name='btnRegisterGroup',
+                                text='Guardar Grupo',
+                                funcion=self.btn_register_group,
+                                bg=self.root.COLOR_SUCCESS)
+        self.root.create_button(main_frame, 'btnBackToMain', text='Volver',
+                                funcion=self.go_to_main, bg='#6C757D')
+
+    def btn_register_group(self):
+        nombre = self.root.componentes.get('inpGroupName').get()
+        descripcion = self.root.componentes.get('inpGroupDesc').get()
+
+        is_registered, response = GroupController.register_group(nombre=nombre, descripcion=descripcion)
+
+        container = self.root.componentes.get('btnRegisterGroup').master
+        color = self.root.COLOR_SUCCESS if is_registered else self.root.COLOR_DANGER
+        self.root.create_label(container, 'lblGroupResponse', response, fg=color)
+
+        if is_registered:
+            self.root.componentes.get('btnRegisterGroup').config(state='disabled')
+            self.root.create_button(container, 'btnAcceptGroup', text='Aceptar',
+                                    funcion=self.go_to_main, bg=self.root.COLOR_PRIMARY)
+
+    def go_to_main(self):
+        MainView(self.root)
+
+
+# --- NUEVA CLASE: VISTA DE PERFIL DE USUARIO ---
+class ProfileView:
+    def __init__(self, root: RootView):
+        self.root = root
+        self.create_profile_interface()
+
+    def create_profile_interface(self):
+        self.root.limpiar_componentes()
+        main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
+        main_frame.pack(expand=True)
+        self.root.create_label(main_frame, 'lblProfileTitle', 'Actualizar Mi Perfil',
+                               font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
+
+        form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
+        form_frame.pack(fill='x')
+
+        labels = ['Nombres:', 'Apellidos:', 'Alias:', 'Nueva Contraseña (opcional):']
+        inputs = ['inpNombres', 'inpApellidos', 'inpAlias', 'inpPassword']
+
+        # --- CAMBIO IMPORTANTE AQUÍ ---
+        # Se utiliza el método proporcionado para obtener los datos del usuario en sesión
+        current_user_data = UserController.get_data_session_manager()
+
+        for i, text in enumerate(labels):
+            self.root.create_label(form_frame, f'lbl{inputs[i]}', text, font_style=self.root.FONT_LABEL,
+                                   pack_info={'anchor': 'w', 'pady': (10, 0)})
+
+            # Se crea el input de forma genérica
+            inp = tk.Entry(form_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND,
+                           fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
+            self.root.componentes[inputs[i]] = inp
+
+            # Se rellena el input con los datos del usuario si corresponde
+            if 'Nombres' in text:
+                inp.insert(0, current_user_data.get('nombres', ''))
+            elif 'Apellidos' in text:
+                inp.insert(0, current_user_data.get('apellidos', ''))
+            elif 'Alias' in text:
+                inp.insert(0, current_user_data.get('alias', ''))
+            elif 'Contraseña' in text:
+                inp.config(show='•')  # Aseguramos que el campo de contraseña esté oculto
+
+            inp.pack(pady=5, ipady=4, fill='x')
+
+        self.root.create_button(main_frame, 'btnUpdateUser', text='Guardar Cambios',
+                                funcion=self.btn_update_user, bg=self.root.COLOR_SUCCESS)
+        self.root.create_button(main_frame, 'btnBackToMainFromProfile', text='Volver',
+                                funcion=self.go_to_main, bg='#6C757D')
+
+    def btn_update_user(self):
+        nombres = self.root.componentes.get('inpNombres').get()
+        apellidos = self.root.componentes.get('inpApellidos').get()
+        alias = self.root.componentes.get('inpAlias').get()
+        password = self.root.componentes.get('inpPassword').get()
+
+        is_updated, response = UserController.event_update_user(
+            nombres=nombres, apellidos=apellidos, alias=alias,
+            password=password if password else None  # Enviar None si el campo está vacío
+        )
+
+        container = self.root.componentes.get('btnUpdateUser').master
+        color = self.root.COLOR_SUCCESS if is_updated else self.root.COLOR_DANGER
+        self.root.create_label(container, 'lblUpdateResponse', response, fg=color, pack_info={'pady': 5})
+
+    def go_to_main(self):
+        MainView(self.root)
 
 class RegisterTareaUserView:
     def __init__(self, root: RootView):
@@ -382,31 +482,24 @@ class RegisterTareaUserView:
         self.create_fomulate_tarea()
 
     def create_fomulate_tarea(self):
-        """Crea la interfaz para registrar una nueva tarea."""
         self.root.limpiar_componentes()
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
         main_frame.pack(expand=True)
-
         self.root.create_label(main_frame, name='lblCreateTaskTitle', text='Registrar Nueva Tarea',
                                font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
-
-        # Formulario con grid
         form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         form_frame.pack()
-
         labels_texts = ['Nombre de la Tarea:', 'Fecha (dd-mm-aaaa):', 'Prioridad (1-5):', 'Detalle:']
-        inputs_names = ['inpNombreCreateTareaUser', 'inpFechaProgramadaCreateTareaUser', 'inpPrioridadCreateTarea', 'inpDetalleCreateTarea']
-
+        inputs_names = ['inpNombreCreateTareaUser', 'inpFechaProgramadaCreateTareaUser', 'inpPrioridadCreateTarea',
+                        'inpDetalleCreateTarea']
         for i, text in enumerate(labels_texts):
             lbl = tk.Label(form_frame, text=text, font=self.root.FONT_LABEL, bg=form_frame.cget('bg'),
                            fg=self.root.COLOR_TEXT_DARK)
             lbl.grid(row=i, column=0, sticky='w', pady=5, padx=5)
-
             inp = tk.Entry(form_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND,
                            fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
             inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5, ipady=4)
             self.root.componentes[inputs_names[i]] = inp
-
         self.root.create_button(main_frame, name='btnRegistrarTareaCreateTarea', text='Guardar Tarea',
                                 funcion=self.btn_registrar_tarea, bg=self.root.COLOR_SUCCESS)
         self.root.create_button(main_frame, name='btnVolverCreateTareaUser', text='Volver',
@@ -418,11 +511,9 @@ class RegisterTareaUserView:
         prioridad = self.root.componentes.get('inpPrioridadCreateTarea').get()
         detalle = self.root.componentes.get('inpDetalleCreateTarea').get()
         is_registered_task, response = TaskController.event_register_task_user(
-            nombre=nombre, fecha=fecha, prioridad=prioridad, detalle= detalle)
-
+            nombre=nombre, fecha=fecha, prioridad=prioridad, detalle=detalle)
         container = self.root.componentes.get('btnRegistrarTareaCreateTarea').master
         color = self.root.COLOR_SUCCESS if is_registered_task else self.root.COLOR_DANGER
-
         if is_registered_task:
             self.root.componentes.get('btnRegistrarTareaCreateTarea').config(state='disabled')
             self.root.create_label(container, 'lblTareaAnadida', text=response, fg=color)
@@ -438,8 +529,6 @@ class RegisterTareaUserView:
         MainView(self.root)
 
 
-# Punto de entrada de la aplicación (si este archivo se ejecuta directamente)
+# Punto de entrada de la aplicación
 if __name__ == '__main__':
-    # Esto te permite probar la vista de forma independiente
-    # La aplicación comenzará desde la pantalla de login.
     LoginInView.independent_login()

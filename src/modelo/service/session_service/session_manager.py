@@ -1,6 +1,7 @@
 """
     Crea la clase con la que se operará toda la aplicacion
 """
+from sqlalchemy.orm import scoped_session
 
 from src.modelo.entities.usuario import Usuario
 import bcrypt
@@ -42,6 +43,12 @@ class SessionManager:
     def validar_usuario(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.usuario.Password.encode('utf-8'))
 
+    def get_data(self):
+        return {
+            'nombres': self.usuario.Nombres,
+            'apellidos': self.usuario.Apellidos,
+            'alias': self.usuario.Alias
+        }
 
 if __name__ == "__main__":
     pass

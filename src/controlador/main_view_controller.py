@@ -19,7 +19,7 @@ class MainViewController:
         if not is_task_recover or not response:
             return is_task_recover, response
 
-        tareas = DataFormat.summarize_task_data_main_view(response)
+        tareas = DataFormat.convert_to_dict_task_data(response)
 
         return is_task_recover, tareas
 

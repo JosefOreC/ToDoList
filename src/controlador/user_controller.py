@@ -15,3 +15,6 @@ class UserController:
         except Exception as E:
             return False, f'No se pudieron guardar los cambios.\n {E}'
 
+    @staticmethod
+    def get_data_session_manager():
+        return SessionManager.get_instance().get_data()

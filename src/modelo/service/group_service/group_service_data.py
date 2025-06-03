@@ -19,3 +19,14 @@ class GroupServiceData:
         except IntegrityError:
             session.rollback()
             raise Exception('Ya existe un grupo con el mismo nombre.')
+
+    @staticmethod
+    def get_data_task_group_name(id_grupo):
+        if id_grupo:
+            return session.query(Grupo.Nombre).filter(Grupo.IDGrupo==id_grupo).first()[0]
+        else:
+            return None
+
+    @staticmethod
+    def get_all_members(id_grupo):
+        pass
