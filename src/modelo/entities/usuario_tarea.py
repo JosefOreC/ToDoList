@@ -14,6 +14,7 @@ class UsuarioTarea(Base):
 
     Disponible = Column(Boolean, default=True)
     Realizado = Column(Boolean, default=False)
+    Archivado = Column(Boolean, default=False)
 
     grupo = relationship('Grupo', back_populates='grupo_tareas')
     tarea = relationship('Tarea', back_populates='tarea_usuarios')

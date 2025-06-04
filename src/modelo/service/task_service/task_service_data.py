@@ -2,6 +2,10 @@
     Clase que controla la entidad tarea y relacionados
     desde la base de datos CRUD.
 """
+from ctypes.wintypes import tagSIZE
+
+from pandas.core.arrays.masked import transpose_homogeneous_masked_arrays
+from sqlalchemy.orm import relationship
 
 from src.modelo.database_management.base.declarative_base import session
 from src.modelo.entities.modelo import UsuarioTarea, Tarea, Grupo
@@ -21,16 +25,16 @@ class TaskServiceData:
         session.commit()
 
     @staticmethod
-    def update_task_user(id_usuario, id_tarea, nombre = None, activo = None,
+    def update_task_user(id_usuario, id_tarea, nombre = None,
                          fecha = None, prioridad = None, disponible = None,
-                         realizado = None, detalle = None):
+                         realizado = None, detalle = None, archivado = None):
 
         updatedata = UpdateTask(id_tarea, id_usuario)
 
         if nombre:
             updatedata.update_name(nombre)
-        if activo:
-            updatedata.update_activo(activo)
+        if archivado is not None:
+            updatedata.update_archivado(archivado)
         if fecha:
             updatedata.update_fecha(fecha)
         if prioridad:
@@ -46,7 +50,9 @@ class TaskServiceData:
 
 
     @staticmethod
-    def get_tasks_user_list_date(usuario_id: int, fecha_inicio: str or date, fecha_fin: str or date = None):
+    def get_tasks_user_list_date(usuario_id: int, fecha_inicio: str or date, fecha_fin: str or date = None,
+                                 activo = True,
+                                 archivado = False):
         fecha_inicio = DataFormat.convertir_fecha(fecha_inicio)
         if not fecha_fin:
             fecha_fin = fecha_inicio
@@ -61,9 +67,26 @@ class TaskServiceData:
                                    UsuarioTarea.Realizado, UsuarioTarea.IDGrupo).join(UsuarioTarea,
                                    UsuarioTarea.IDUsuario==usuario_id).filter(UsuarioTarea.IDTarea==Tarea.IDTarea,
                                    Tarea.Fecha_programada >= fecha_inicio,
-                                   Tarea.Fecha_programada <= fecha_fin).order_by(Tarea.Prioridad.asc()).all()
+                                   Tarea.Fecha_programada <= fecha_fin,
+                                   Tarea.Activo == activo,
+                                   UsuarioTarea.Archivado == archivado).order_by(Tarea.Prioridad.asc()).all()
         return resultados
 
+    @staticmethod
+    def get_tasks_user_list_all(usuario_id: int, activo=True, archivado=False):
+
+        resultados = session.query(Tarea,
+                                    UsuarioTarea.Disponible,
+                                    UsuarioTarea.Realizado, UsuarioTarea.IDGrupo).join(UsuarioTarea,
+                                    UsuarioTarea.IDUsuario == usuario_id).filter(
+                                    UsuarioTarea.IDTarea == Tarea.IDTarea,
+                                    Tarea.Activo == activo,
+                                    UsuarioTarea.Archivado == archivado).order_by(Tarea.Prioridad.asc()).all()
+        return resultados
+
+    @staticmethod
+    def get_task_user_archivade(usuario_id: int):
+        return TaskServiceData.get_tasks_user_list_all(usuario_id, archivado = False)
 
     @staticmethod
     def get_tasks_session_user_list_date(fecha: str or date):
@@ -73,7 +96,32 @@ class TaskServiceData:
     @staticmethod
     def get_tasks_session_user_list_today():
         return TaskServiceData.get_tasks_session_user_list_date(date.today())
+    
+    @staticmethod
+    def get_task(id_tarea):
+        return session.query(Tarea).filter_by(IDTarea=id_tarea).first()
+            
+    @staticmethod
+    def soft_delete_task(id_tarea):
+        tarea = TaskServiceData.get_task(id_tarea)
+        actualizacion = UpdateTask(tarea)
+        actualizacion.update_activo(False)
+        session.commit()
 
+    @staticmethod
+    def get_relations_of_task(id_tarea):
+        return session.query(UsuarioTarea).filter_by(IDTarea=id_tarea).all()
+
+    @staticmethod
+    def __delete_task(id_tarea):
+
+        relaciones = TaskServiceData.get_relations_of_task(id_tarea)
+        tarea = TaskServiceData.get_task(id_tarea)
+        for relacion in relaciones:
+            session.delete(relacion)
+
+        session.delete(tarea)
+        session.commit()
 
 
 

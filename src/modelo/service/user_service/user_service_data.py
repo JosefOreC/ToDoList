@@ -11,11 +11,15 @@ from sqlalchemy.exc import IntegrityError
 class UserServiceData:
     @staticmethod
     def recover_user_for_alias(alias: str):
-        return session.query(Usuario).where(Usuario.Alias == alias).first()
+        return session.query(Usuario).filter_by(Alias=alias).first()
+
+    @staticmethod
+    def recover_id_user_for_alias(alias: str):
+        return session.query(Usuario.IDUsuario).filter_by(Alias=alias).first()
 
     @staticmethod
     def is_user_with_alias_exits(alias: str):
-        return True if session.query(1).where(Usuario.Alias == alias).first() else False
+        return True if session.query(1).filter(Usuario.Alias==alias).first() else False
 
     @staticmethod
     def insert_new_user(usuario: Usuario):
@@ -37,7 +41,7 @@ class UserServiceData:
         try:
             if alias:
                 update_data.update_alias(alias)
-            if estado != None:
+            if estado is not None:
                 update_data.update_estado(estado)
             if password:
                 update_data.update_password(password)
@@ -46,4 +50,8 @@ class UserServiceData:
 
         except IntegrityError:
             session.rollback()
-            raise IntegrityError("El alias ya está ocupado.")
+            raise Exception("El alias ya está ocupado.")
+
+        except Exception as E:
+            session.rollback()
+            raise Exception(E)

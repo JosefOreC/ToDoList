@@ -358,20 +358,27 @@ class MainView:
 
 
 # --- NUEVA CLASE: VISTA DE REGISTRO DE GRUPOS ---
+# --- NUEVA CLASE: VISTA DE REGISTRO DE GRUPOS (VERSIÓN MODIFICADA) ---
+# --- NUEVA CLASE: VISTA DE REGISTRO DE GRUPOS (VERSIÓN CORREGIDA) ---
+# --- NUEVA CLASE: VISTA DE REGISTRO DE GRUPOS (VERSIÓN CORREGIDA) ---
 class GroupRegisterView:
     def __init__(self, root: RootView):
         self.root = root
+        # Lista para mantener los alias de los miembros a agregar
+        self.miembros_alias = []
         self.create_group_form()
 
     def create_group_form(self):
         self.root.limpiar_componentes()
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
-        main_frame.pack(expand=True)
+        main_frame.pack(expand=True, fill='both')
+
         self.root.create_label(main_frame, 'lblGroupTitle', 'Registrar Nuevo Grupo',
                                font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
 
+        # --- Formulario Principal ---
         form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
-        form_frame.pack(fill='x')
+        form_frame.pack(fill='x', pady=10)
 
         self.root.create_label(form_frame, 'lblGroupName', 'Nombre del Grupo:', font_style=self.root.FONT_LABEL,
                                pack_info={'anchor': 'w'})
@@ -381,33 +388,135 @@ class GroupRegisterView:
                                pack_info={'anchor': 'w', 'pady': (10, 0)})
         self.root.create_input(form_frame, 'inpGroupDesc')
 
-        # DENTRO DE create_group_form
-        self.root.create_button(main_frame,
-                                name='btnRegisterGroup',
-                                text='Guardar Grupo',
-                                funcion=self.btn_register_group,
-                                bg=self.root.COLOR_SUCCESS)
-        self.root.create_button(main_frame, 'btnBackToMain', text='Volver',
-                                funcion=self.go_to_main, bg='#6C757D')
+        # --- Sección para Añadir Miembros ---
+        members_section_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'), pady=10)
+        members_section_frame.pack(fill='x', expand=True)
+
+        self.root.create_label(members_section_frame, 'lblAddMemberTitle', 'Añadir Miembros (por alias):',
+                               font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w'})
+
+        add_member_input_frame = tk.Frame(members_section_frame, bg=members_section_frame.cget('bg'))
+        add_member_input_frame.pack(fill='x')
+
+        inp_alias = tk.Entry(add_member_input_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND,
+                             fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
+        inp_alias.pack(side='left', fill='x', expand=True, ipady=4, pady=5, padx=(0, 10))
+        inp_alias.bind("<Key>", self.clear_member_error)  # Limpia el error al escribir
+        self.root.componentes['inpMemberAlias'] = inp_alias
+
+        btn_add = tk.Button(add_member_input_frame, text="Añadir Miembro", command=self.btn_add_member,
+                            bg=self.root.COLOR_PRIMARY, fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON,
+                            relief='flat', cursor="hand2")
+        btn_add.pack(side='right', ipady=5, ipadx=10)
+        self.root.componentes['btnAddMember'] = btn_add
+
+        # Etiqueta para mostrar errores de validación de alias
+        self.root.create_label(members_section_frame, 'lblMemberError', text="", fg=self.root.COLOR_DANGER,
+                               pack_info={'anchor': 'w'})
+
+        # --- Frame para la lista visual de miembros ---
+        self.root.create_label(members_section_frame, 'lblCurrentMembers', 'Miembros a Agregar:',
+                               font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w', 'pady': (10, 5)})
+
+        self.members_frame = tk.Frame(members_section_frame, bg=self.root.COLOR_BACKGROUND,
+                                      relief='solid', borderwidth=1, padx=10, pady=10)
+        self.members_frame.pack(fill='both', expand=True)
+        # Se actualiza por primera vez para mostrar que está vacío
+        self.update_members_display()
+
+        # --- Botones de Acción Principales (AQUÍ ESTÁ LA CORRECCIÓN) ---
+        action_buttons_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
+        action_buttons_frame.pack(fill='x', pady=(20, 0))  # pady se movió aquí
+
+        self.root.create_button(action_buttons_frame, name='btnRegisterGroup', text='Guardar Grupo',
+                                funcion=self.btn_register_group, bg=self.root.COLOR_SUCCESS,
+                                pack_info={'side': 'left', 'expand': True, 'padx': 5})
+        self.root.create_button(action_buttons_frame, 'btnBackToMain', text='Volver',
+                                funcion=self.go_to_main, bg='#6C757D',
+                                pack_info={'side': 'right', 'expand': True, 'padx': 5})
+
+    def btn_add_member(self):
+        alias_input = self.root.componentes.get('inpMemberAlias')
+        alias = alias_input.get().strip()
+
+        if not alias:
+            return
+
+        if alias in self.miembros_alias:
+            self.root.componentes['lblMemberError'].config(text=f"El usuario '{alias}' ya está en la lista.")
+            return
+
+        is_valid, _ = GroupController.is_user_exits(alias)
+
+        if is_valid:
+            self.miembros_alias.append(alias)
+            self.update_members_display()
+            alias_input.delete(0, tk.END)
+            self.clear_member_error()  # Limpia el mensaje de error si tuvo éxito
+        else:
+            self.root.componentes['lblMemberError'].config(text=f"Error: El usuario con alias '{alias}' no existe.")
+
+    def update_members_display(self):
+        # Limpiar el frame de miembros antes de redibujar
+        for widget in self.members_frame.winfo_children():
+            widget.destroy()
+
+        if not self.miembros_alias:
+            tk.Label(self.members_frame, text="No hay miembros agregados.",
+                     font=self.root.FONT_BODY, bg=self.members_frame.cget('bg'),
+                     fg='#6C757D').pack(pady=10)
+            return
+
+        for alias in self.miembros_alias:
+            member_item_frame = tk.Frame(self.members_frame, bg=self.members_frame.cget('bg'))
+            member_item_frame.pack(fill='x', pady=2)
+
+            lbl = tk.Label(member_item_frame, text=f"• {alias}", font=self.root.FONT_BODY,
+                           bg=member_item_frame.cget('bg'))
+            lbl.pack(side='left', padx=(0, 10))
+
+            # Botón para quitar el miembro de la lista
+            btn_remove = tk.Button(member_item_frame, text="Quitar",
+                                   command=lambda a=alias: self.remove_member(a),
+                                   bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT,
+                                   font=("Helvetica", 8, "bold"), relief='flat', cursor="hand2")
+            btn_remove.pack(side='right')
+
+    def remove_member(self, alias_to_remove):
+        if alias_to_remove in self.miembros_alias:
+            self.miembros_alias.remove(alias_to_remove)
+            self.update_members_display()
+
+    def clear_member_error(self, event=None):
+        # El argumento 'event' es necesario para el binding de <Key>
+        if lbl_error := self.root.componentes.get('lblMemberError'):
+            lbl_error.config(text="")
 
     def btn_register_group(self):
         nombre = self.root.componentes.get('inpGroupName').get()
         descripcion = self.root.componentes.get('inpGroupDesc').get()
 
-        is_registered, response = GroupController.register_group(nombre=nombre, descripcion=descripcion)
+        # Se pasa la lista de alias al controlador
+        is_registered, response = GroupController.register_group(
+            nombre=nombre,
+            descripcion=descripcion,
+            miembros_alias=self.miembros_alias
+        )
 
-        container = self.root.componentes.get('btnRegisterGroup').master
+        container = self.root.componentes.get('btnRegisterGroup').master.master
         color = self.root.COLOR_SUCCESS if is_registered else self.root.COLOR_DANGER
-        self.root.create_label(container, 'lblGroupResponse', response, fg=color)
+
+        # Se crea la etiqueta de respuesta en el contenedor principal para mayor visibilidad
+        self.root.create_label(container, 'lblGroupResponse', response, fg=color, pack_info={'pady': 10})
 
         if is_registered:
             self.root.componentes.get('btnRegisterGroup').config(state='disabled')
+            self.root.componentes.get('btnAddMember').config(state='disabled')
             self.root.create_button(container, 'btnAcceptGroup', text='Aceptar',
                                     funcion=self.go_to_main, bg=self.root.COLOR_PRIMARY)
 
     def go_to_main(self):
         MainView(self.root)
-
 
 # --- NUEVA CLASE: VISTA DE PERFIL DE USUARIO ---
 class ProfileView:
