@@ -103,8 +103,7 @@ class TaskServiceData:
             
     @staticmethod
     def soft_delete_task(id_tarea):
-        tarea = TaskServiceData.get_task(id_tarea)
-        actualizacion = UpdateTask(tarea)
+        actualizacion = UpdateTask(id_tarea)
         actualizacion.update_activo(False)
         session.commit()
 

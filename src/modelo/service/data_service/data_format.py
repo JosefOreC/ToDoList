@@ -6,7 +6,10 @@ class DataFormat:
     @staticmethod
     def convertir_fecha(fecha: str):
         if isinstance(fecha, str):
-            return datetime.strptime(fecha, "%d-%m-%Y").date()
+            try:
+                return datetime.strptime(fecha, "%d-%m-%Y").date()
+            except:
+                raise ValueError("Formato de fecha no soportado")
         elif isinstance(fecha, datetime):
             return fecha.date()
         elif isinstance(fecha, date):
@@ -26,7 +29,7 @@ class DataFormat:
                        'nombre': tarea.Nombre,
                        'disponible': dis,
                        'realizado': rea,
-                       'fecha': tarea.Fecha_programada,
+                       'fecha': tarea.Fecha_programada.strftime("%d-%m-%Y"),
                        'prioridad': tarea.Prioridad,
                        'activo': tarea.Activo,
                        'detalle': tarea.Detalle,

@@ -28,7 +28,7 @@ class UserServiceData:
             session.commit()
         except IntegrityError:
             session.rollback()
-            raise IntegrityError("El alias ya está ocupado.")
+            raise Exception("El alias ya está ocupado.")
 
     @staticmethod
     def update_user(usuario: str or Usuario, nombres=None, apellidos=None, alias = None, estado = None, password = None):
