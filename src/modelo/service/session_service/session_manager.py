@@ -1,7 +1,6 @@
 """
     Crea la clase con la que se operará toda la aplicacion
 """
-from sqlalchemy.orm import scoped_session
 
 from src.modelo.entities.usuario import Usuario
 import bcrypt
