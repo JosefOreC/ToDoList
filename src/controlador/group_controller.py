@@ -8,7 +8,6 @@ from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.service.user_service.user_service_data import UserServiceData
 
 
-
 class GroupController:
     @staticmethod
     def register_group(nombre: str, descripcion: str = None, miembros_alias: list[str]=None) -> bool and str:
@@ -25,11 +24,13 @@ class GroupController:
         except Exception as E:
             return False, f"No se pudo guardar el grupo. \n {E}"
 
-
     @staticmethod
     def add_member_group(alias_usuario):
         return UserServiceData.recover_id_user_for_alias(alias_usuario)[0]
 
+    @staticmethod
+    def get_all_members(id_grupo):
+        return GroupServiceData.get_all_members_with_rol(id_grupo)
     @staticmethod
     def is_user_exits(alias_usuario) -> bool and str:
 
@@ -42,6 +43,9 @@ class GroupController:
         except Exception as E:
             return False, f"No se pudo recuperar de la base de datos. \n{E}"
 
+    @staticmethod
+    def get_groups_editable() -> list[str]:
+        return GroupServiceData.get_groups_editor_or_master(SessionManager.get_id_user())
 
 
 

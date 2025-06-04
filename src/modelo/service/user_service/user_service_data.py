@@ -4,7 +4,7 @@
 """
 
 from src.modelo.database_management.base.declarative_base import session
-from src.modelo.entities.modelo import Usuario
+from src.modelo.entities.modelo import Usuario, UsuarioGrupo, Grupo
 from src.modelo.service.user_service.update_user import UpdateUser
 from sqlalchemy.exc import IntegrityError
 
@@ -31,7 +31,7 @@ class UserServiceData:
             raise Exception("El alias ya está ocupado.")
 
     @staticmethod
-    def update_user(usuario: str or Usuario, nombres=None, apellidos=None, alias = None, estado = None, password = None):
+    def update_user(usuario: str or Usuario, nombres=None, apellidos=None, alias = None, estado = None, password= None):
 
         update_data = UpdateUser(usuario)
         if nombres:
@@ -55,3 +55,4 @@ class UserServiceData:
         except Exception as E:
             session.rollback()
             raise Exception(E)
+

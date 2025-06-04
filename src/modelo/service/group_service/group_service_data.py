@@ -35,10 +35,22 @@ class GroupServiceData:
         return [member[0] for member in response]
 
     @staticmethod
+    def get_all_members_with_rol(id_grupo):
+        response = session.query(UsuarioGrupo.IDUsuario, UsuarioGrupo.rol).filter(UsuarioGrupo.IDGrupo == id_grupo).all()
+        return [[member[0], member[1]] for member in response]
+    @staticmethod
     def get_all_members_without_master(id_grupo) -> list[int]:
         response = session.query(UsuarioGrupo.IDUsuario).where(UsuarioGrupo.rol != Rol.master).filter(UsuarioGrupo.IDGrupo==id_grupo).all()
         return [member[0] for member in response]
 
+    @staticmethod
+    def get_groups_editor_or_master(id_usuario):
+        response = (session.query(Grupo.Nombre).join(UsuarioGrupo, UsuarioGrupo.
+                                          IDGrupo==Grupo.IDGrupo).
+                                          filter(UsuarioGrupo.IDUsuario==id_usuario,
+                                          UsuarioGrupo.rol == Rol.editor or UsuarioGrupo.rol == Rol.master).all())
+        return [grupo[0] for grupo in response]
+
 
 if __name__ == '__main__':
-    GroupServiceData.get_all_members(1)
+    pass

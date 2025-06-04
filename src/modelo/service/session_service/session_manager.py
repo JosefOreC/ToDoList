@@ -42,6 +42,10 @@ class SessionManager:
     def validar_usuario(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.usuario.Password.encode('utf-8'))
 
+    @staticmethod
+    def get_id_user():
+        return SessionManager.get_instance().usuario.IDUsuario
+
     def get_data(self):
         return {
             'nombres': self.usuario.Nombres,
