@@ -2,10 +2,7 @@
     Clase que controla la entidad tarea y relacionados
     desde la base de datos CRUD.
 """
-from ctypes.wintypes import tagSIZE
 
-from pandas.core.arrays.masked import transpose_homogeneous_masked_arrays
-from sqlalchemy.orm import relationship
 
 from src.modelo.database_management.base.declarative_base import session
 from src.modelo.entities.modelo import UsuarioTarea, Tarea, Grupo

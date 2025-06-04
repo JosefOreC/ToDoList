@@ -46,13 +46,13 @@ class TaskController:
 
         try:
             prioridad = int(prioridad)
-            if prioridad <=0 or prioridad >= 5:
+            if prioridad <=0 or prioridad > 5:
                 return False, "Prioridad no válida, tiene que estar el 1 al 5."
         except ValueError as E:
             return False, E
         except TypeError as E:
             return False, E
-
+        return True,"datos validos"
 
     @staticmethod
     def event_update_task_user(id_usuario, id_tarea, nombre = None,

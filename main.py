@@ -1,4 +1,9 @@
-from src.vista.vista import LoginInView, RootView
+from src.vista.vista import ft, TodoApp
 
 if __name__=='__main__':
-    LoginInView.independent_login()
+    def main(page: ft.Page):
+        app = TodoApp(page)
+        page.update()
+
+
+    ft.app(target=main)
