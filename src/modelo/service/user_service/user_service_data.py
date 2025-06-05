@@ -15,7 +15,7 @@ class UserServiceData:
 
     @staticmethod
     def recover_id_user_for_alias(alias: str):
-        return session.query(Usuario.IDUsuario).filter_by(Alias=alias).first()
+        return session.query(Usuario.IDUsuario).filter_by(Alias=alias).first()[0]
 
     @staticmethod
     def is_user_with_alias_exits(alias: str):

@@ -26,7 +26,7 @@ class GroupController:
 
     @staticmethod
     def add_member_group(alias_usuario):
-        return UserServiceData.recover_id_user_for_alias(alias_usuario)[0]
+        return UserServiceData.recover_id_user_for_alias(alias_usuario)
 
     @staticmethod
     def get_all_members(id_grupo):
