@@ -37,7 +37,9 @@ class GroupController:
 
     @staticmethod
     def is_user_exits(alias_usuario) -> bool and str:
-
+        if alias_usuario == SessionManager.get_instance().usuario.Alias:
+            return False, (f"No se puede agregar el usuario {alias_usuario} porque es el que está creando el grupo.\n"
+                           f"Ya está incluido.")
         try:
             if is_user:=UserServiceData.is_user_with_alias_exits(alias_usuario):
                 return is_user, "Usuario existente."

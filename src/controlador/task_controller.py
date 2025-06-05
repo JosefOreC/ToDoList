@@ -117,7 +117,7 @@ class TaskController:
 
     @staticmethod
     def event_register_task_group(id_grupo, nombre: str, fecha: str, prioridad: int, detalle: str,
-                                  miembros_disponible: list[[str, bool]] = 'all'): #lista (alias, disponible)
+                                  miembros_disponible: list[[str, bool]] or str = 'all'): #lista (alias, disponible)
         is_tarea_create, response = TaskController.__create_tarea(nombre,fecha,prioridad,detalle)
         if miembros_disponible != 'all':
             miembros_id_disponible = [[UserServiceData.recover_id_user_for_alias(miembro), disponible]
