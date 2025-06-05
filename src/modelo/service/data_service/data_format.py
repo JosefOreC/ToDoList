@@ -26,8 +26,12 @@ class DataFormat:
         for tarea, dis, rea, id_grupo in tareas:
             if not tarea.Activo:
                 continue
-            grupo = gsd.get_data_task_group_name(id_grupo)
-            rol = gsd.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+            if id_grupo:
+                grupo = gsd.get_data_task_group_name(id_grupo)
+                rol = gsd.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+            else:
+                grupo = None
+                rol = None
             summary = {'id_tarea': tarea.IDTarea,
                        'nombre': tarea.Nombre,
                        'disponible': dis,

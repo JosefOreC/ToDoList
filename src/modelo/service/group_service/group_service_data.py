@@ -2,6 +2,8 @@
 
 
 """
+from types import NoneType
+
 from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol, Usuario, UsuarioTarea
 from src.modelo.database_management.base.declarative_base import session
 from sqlalchemy import or_
@@ -65,7 +67,10 @@ class GroupServiceData:
 
     @staticmethod
     def get_rol_in_group(id_usuario, id_grupo):
-        return session.query(UsuarioGrupo.rol).filter_by(IDUsuario=id_usuario, IDGrupo=id_grupo).first()[0]
+        try:
+            return session.query(UsuarioGrupo.rol).filter_by(IDUsuario=id_usuario, IDGrupo=id_grupo).first()[0]
+        except NoneType:
+            return None
 
     @staticmethod
     def get_master_alias_of_group(id_grupo):
