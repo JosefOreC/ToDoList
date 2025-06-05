@@ -32,6 +32,10 @@ class GroupController:
     def get_all_members(id_grupo):
         return GroupServiceData.get_all_members_with_rol(id_grupo)
     @staticmethod
+    def get_all_members_with_rol(id_grupo):
+        return GroupServiceData.get_all_members_with_rol(id_grupo)
+
+    @staticmethod
     def is_user_exits(alias_usuario) -> bool and str:
 
         try:
@@ -44,8 +48,8 @@ class GroupController:
             return False, f"No se pudo recuperar de la base de datos. \n{E}"
 
     @staticmethod
-    def get_groups_editable() -> list[str]:
-        return GroupServiceData.get_groups_editor_or_master(SessionManager.get_id_user())
+    def get_groups_editable() -> list[list[int,str]]:
+        return GroupServiceData.get_groups_editor_or_master_with_id(SessionManager.get_id_user())
 
 
 

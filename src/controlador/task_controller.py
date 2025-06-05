@@ -3,6 +3,7 @@ from xmlrpc.client import FastParser
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.entities.tarea import Tarea
 from src.modelo.service.task_service.register_task import RegisterTask, TaskServiceData
+from src.modelo.service.user_service.user_service_data import UserServiceData
 from src.modelo.service.data_service.data_format import DataFormat
 
 class TaskController:
@@ -29,24 +30,34 @@ class TaskController:
     @staticmethod
     def __create_tarea(nombre: str, fecha: str, prioridad: int, detalle: str) -> bool or Tarea:
 
-        is_valid, response = TaskController.validar_datos(fecha, prioridad)
-        if is_valid is False:
-            return is_valid, response
-
-        fecha = DataFormat.convertir_fecha(fecha)
-
-        return True, Tarea(Nombre=nombre, Fecha_programada=fecha, Prioridad=prioridad, Detalle = detalle)
-
-    @staticmethod
-    def validar_datos(fecha: str=None, prioridad: int=None):
         try:
-            DataFormat.convertir_fecha(fecha)
+            fecha = DataFormat.convertir_fecha(fecha)
         except Exception as E:
             return False, f"Fecha no valida. Error {E}"
 
         try:
             prioridad = int(prioridad)
-            if prioridad <=0 or prioridad > 5:
+            if prioridad <= 0 or prioridad > 5:
+                return False, "Prioridad no válida, tiene que estar el 1 al 5."
+        except ValueError as E:
+            return False, E
+        except TypeError as E:
+            return False, E
+
+        return True, Tarea(Nombre=nombre, Fecha_programada=fecha, Prioridad=prioridad, Detalle = detalle)
+
+    @staticmethod
+    def validar_datos(fecha: str=None, prioridad: int=None):
+
+        try:
+            DataFormat.convertir_fecha(fecha)
+        except Exception as E:
+            return False, f"Fecha no valida. Error {E}"
+
+
+        try:
+            prioridad = int(prioridad)
+            if prioridad <= 0 or prioridad > 5:
                 return False, "Prioridad no válida, tiene que estar el 1 al 5."
         except ValueError as E:
             return False, E
@@ -58,12 +69,12 @@ class TaskController:
     def event_update_task_user(id_usuario, id_tarea, nombre = None,
                          fecha = None, prioridad= None, disponible=None,
                          realizado = None, detalle = None):
-        if not(nombre  or fecha or prioridad or detalle) and disponible is None and realizado is None:
+        if not(nombre or fecha or prioridad or detalle) and disponible is None and realizado is None:
             return False, 'No hubo cambios.'
 
         if fecha:
             try:
-                    fecha = DataFormat.convertir_fecha(fecha)
+                fecha = DataFormat.convertir_fecha(fecha)
             except ValueError as E:
                 return False, E
 
@@ -106,13 +117,18 @@ class TaskController:
 
     @staticmethod
     def event_register_task_group(id_grupo, nombre: str, fecha: str, prioridad: int, detalle: str,
-                                  miembros_disponible: list[[int, bool]] = 'all'): #lista (alias, disponible)
+                                  miembros_disponible: list[[str, bool]] = 'all'): #lista (alias, disponible)
         is_tarea_create, response = TaskController.__create_tarea(nombre,fecha,prioridad,detalle)
+        if miembros_disponible != 'all':
+            miembros_id_disponible = [[UserServiceData.recover_id_user_for_alias(miembro), disponible]
+                                      for miembro, disponible in miembros_disponible]
+        else:
+            miembros_id_disponible = miembros_disponible
 
-        if not  is_tarea_create:
+        if not is_tarea_create:
             return is_tarea_create, response
 
-        return RegisterTask(tarea=response, id_grupo=id_grupo,miembro_disponible=miembros_disponible).register_task()
+        return RegisterTask(tarea=response, id_grupo=id_grupo,miembro_disponible=miembros_id_disponible).register_task()
 
     @staticmethod
     def event_archive_task(id_tarea):

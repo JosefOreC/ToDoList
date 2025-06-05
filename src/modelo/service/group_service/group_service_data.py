@@ -4,7 +4,7 @@
 """
 
 
-from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol
+from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol, Usuario
 from src.modelo.database_management.base.declarative_base import session
 from sqlalchemy.exc import IntegrityError
 
@@ -36,8 +36,9 @@ class GroupServiceData:
 
     @staticmethod
     def get_all_members_with_rol(id_grupo):
-        response = session.query(UsuarioGrupo.IDUsuario, UsuarioGrupo.rol).filter(UsuarioGrupo.IDGrupo == id_grupo).all()
+        response = session.query(Usuario.Alias, UsuarioGrupo.rol).join(Usuario, Usuario.IDUsuario == UsuarioGrupo.IDUsuario).filter(UsuarioGrupo.IDGrupo == id_grupo).all()
         return [[member[0], member[1]] for member in response]
+
     @staticmethod
     def get_all_members_without_master(id_grupo) -> list[int]:
         response = session.query(UsuarioGrupo.IDUsuario).where(UsuarioGrupo.rol != Rol.master).filter(UsuarioGrupo.IDGrupo==id_grupo).all()
@@ -50,6 +51,14 @@ class GroupServiceData:
                                           filter(UsuarioGrupo.IDUsuario==id_usuario,
                                           UsuarioGrupo.rol == Rol.editor or UsuarioGrupo.rol == Rol.master).all())
         return [grupo[0] for grupo in response]
+
+    @staticmethod
+    def get_groups_editor_or_master_with_id(id_usuario):
+        response = (session.query(Grupo.IDGrupo, Grupo.Nombre).join(UsuarioGrupo, UsuarioGrupo.
+                                                     IDGrupo == Grupo.IDGrupo).
+                    filter(UsuarioGrupo.IDUsuario == id_usuario,
+                           UsuarioGrupo.rol == Rol.editor or UsuarioGrupo.rol == Rol.master).all())
+        return response
 
 
 if __name__ == '__main__':
