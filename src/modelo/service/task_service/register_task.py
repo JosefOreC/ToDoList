@@ -17,7 +17,7 @@ class RegisterTask:
         self.id_grupo = id_grupo
         if id_grupo:
             if  miembro_disponible== 'all':
-                miembros = GroupServiceData.get_all_members_without_master(id_grupo)
+                miembros = GroupServiceData.get_all_members(id_grupo)
                 self.users_grupo = [[miembro, True] for miembro in miembros]
             else:
                 self.users_grupo = miembro_disponible
@@ -35,7 +35,8 @@ class RegisterTask:
     def register_task(self):
         if self.id_grupo:
             self.__register_task_group()
-        self.__register_task_user(SessionManager.get_instance().usuario.IDUsuario)
+        else:
+            self.__register_task_user(SessionManager.get_instance().usuario.IDUsuario)
         return self.__save_in_db()
 
     def __save_in_db(self):

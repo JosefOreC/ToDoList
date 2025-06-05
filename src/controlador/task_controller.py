@@ -104,7 +104,7 @@ class TaskController:
 
         try:
             prioridad = int(prioridad)
-            if prioridad <=0 or prioridad >= 5:
+            if prioridad <=0 or prioridad > 5:
                 return False, "Prioridad no válida, tiene que estar el 1 al 5."
         except ValueError as E:
             return False, E

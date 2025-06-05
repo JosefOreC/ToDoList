@@ -50,8 +50,37 @@ class GroupController:
             return False, f"No se pudo recuperar de la base de datos. \n{E}"
 
     @staticmethod
+    def is_member_in_group(id_grupo, alias_usuario):
+        id_usuario = UserServiceData.recover_id_user_for_alias(alias_usuario)
+        return GroupServiceData.is_user_in_group(id_grupo, id_usuario)
+
+    @staticmethod
     def get_groups_editable() -> list[list[int,str]]:
         return GroupServiceData.get_groups_editor_or_master_with_id(SessionManager.get_id_user())
+
+    @staticmethod
+    def get_rol_in_group(id_grupo):
+        return GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+
+    @staticmethod
+    def get_group_master_alias(id_grupo):
+        return GroupServiceData.get_master_alias_of_group(id_grupo)
+
+    @staticmethod
+    def add_members_to_group(id_grupo, miembros: tuple[str] or str):
+        try:
+            if isinstance(miembros, list):
+                miembros_id = [GroupController.add_member_group(miembro) for miembro in miembros]
+            else:
+                miembros_id = GroupController.add_member_group(miembros)
+        except Exception as E:
+            return False, f"No se puedo agregar los miembro(s). \n {E}"
+
+
+
+
+
+
 
 
 
