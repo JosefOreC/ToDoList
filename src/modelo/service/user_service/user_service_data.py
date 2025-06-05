@@ -23,7 +23,7 @@ class UserServiceData:
 
     @staticmethod
     def is_user_with_alias_exits(alias: str):
-        return True if session.query(1).filter(Usuario.Alias==alias, Estado=True).first() else False
+        return True if session.query(1).filter(Usuario.Alias==alias, Usuario.Estado==True).first() else False
 
     @staticmethod
     def insert_new_user(usuario: Usuario):
