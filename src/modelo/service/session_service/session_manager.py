@@ -20,10 +20,29 @@ class SessionManager:
     __instance = None
 
     def __init__(self, usuario):
+        """
+        Inicializa el gestor de sesión con el usuario proporcionado.
+
+        Args:
+            usuario (Usuario): Instancia del usuario que ha iniciado sesión.
+        """
         self.usuario = usuario
 
     @staticmethod
     def get_instance(usuario: Usuario = None):
+        """
+        Obtiene la instancia única del gestor de sesión. Si no existe,
+        se debe proporcionar un usuario para crearla.
+
+        Args:
+            usuario (Usuario, optional): Usuario con el que se inicia sesión.
+
+        Returns:
+            SessionManager: Instancia única del gestor de sesión.
+
+        Raises:
+            Exception: Si no hay sesión activa ni se proporciona un usuario.
+        """
         if not SessionManager.__instance:
             if not usuario:
                 raise Exception("No existe un usuario logueado ahora mismo OR "
@@ -34,9 +53,18 @@ class SessionManager:
 
     @staticmethod
     def log_out():
+        """
+        Cierra la sesión actual eliminando la instancia activa del gestor.
+        """
         SessionManager.__instance = None
 
     def get_password(self):
+        """
+        Obtiene la contraseña cifrada del usuario actual.
+
+        Returns:
+            str: Contraseña cifrada (hash).
+        """
         return self.usuario.Password
 
     def validar_usuario(self, password: str) -> bool:

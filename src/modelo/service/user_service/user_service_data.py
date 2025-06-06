@@ -1,6 +1,6 @@
 """
-    Clase que controla los datos de la entidad usuario
-    se basa en el control de querys: recuperación, actualización, inserción, eliminación de datos
+Clase que controla los datos de la entidad usuario
+se basa en el control de querys: recuperación, actualización, inserción, eliminación de datos
 """
 
 from src.modelo.database_management.base.declarative_base import session
@@ -9,16 +9,50 @@ from src.modelo.service.user_service.update_user import UpdateUser
 from sqlalchemy.exc import IntegrityError
 
 class UserServiceData:
+    """
+    Proporciona servicios relacionados al manejo de datos de usuarios en la base de datos.
+    """
+
     @staticmethod
     def recover_user_for_alias(alias: str):
+        """
+        Recupera un usuario activo a partir de su alias.
+
+        Args:
+            alias (str): Alias del usuario.
+
+        Returns:
+            Usuario: Instancia del usuario si existe y está activo, de lo contrario None.
+        """
         return session.query(Usuario).filter_by(Alias=alias, Estado=True).first()
 
     @staticmethod
     def get_user_for_id_user(id_usuario):
+        """
+        Recupera un usuario activo a partir de su ID.
+
+        Args:
+            id_usuario (int): ID del usuario.
+
+        Returns:
+            Usuario: Instancia del usuario si existe y está activo, de lo contrario None.
+        """
         return session.query(Usuario).filter_by(IDUsuario=id_usuario, Estado=True).first()
 
     @staticmethod
     def recover_id_user_for_alias(alias: str):
+        """
+        Recupera el ID de un usuario activo a partir de su alias.
+
+        Args:
+            alias (str): Alias del usuario.
+
+        Returns:
+            int: ID del usuario.
+
+       Raises:
+           IndexError: Si no se encuentra un usuario con el alias dado.
+       """
         return session.query(Usuario.IDUsuario).filter_by(Alias=alias, Estado=True).first()[0]
 
     @staticmethod

@@ -8,6 +8,15 @@ from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol
 from datetime import datetime
 
 class RegisterGroup:
+    """
+    Clase encargada de registrar un nuevo grupo y establecer relaciones con sus miembros.
+
+    Atributos:
+        grupo (Grupo): Objeto Grupo que se desea registrar.
+        miembros (list[int], opcional): Lista de IDs de usuarios que serán miembros del grupo.
+        __relation_list (list[UsuarioGrupo]): Lista interna de relaciones entre el grupo y los usuarios.
+    """
+
     def __init__(self, grupo: Grupo, miembros_id: list[int]=None):
         self.grupo = grupo
         self.miembros = miembros_id
@@ -33,4 +42,15 @@ class RegisterGroup:
 
     @staticmethod
     def create_primitive_group(nombre: str, id_master: int, descripcion:str=None) -> Grupo:
+        """
+        Crea una instancia primitiva de un grupo sin persistirla.
+
+        Args:
+            nombre (str): Nombre del grupo.
+            id_master (int): ID del usuario que será el master del grupo.
+            descripcion (str, opcional): Descripción del grupo.
+
+        Returns:
+            Grupo: Objeto Grupo instanciado con los valores proporcionados.
+        """
         return Grupo(Nombre=nombre, IDMaster = id_master, Descripcion=descripcion, Fecha_creacion = datetime.today())

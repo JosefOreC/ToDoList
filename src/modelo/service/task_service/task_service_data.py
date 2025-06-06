@@ -1,6 +1,6 @@
 """
-    Clase que controla la entidad tarea y relacionados
-    desde la base de datos CRUD.
+Clase que controla la entidad tarea y relacionados
+desde la base de datos CRUD.
 """
 
 
@@ -14,6 +14,13 @@ from src.modelo.service.task_service.update_task import UpdateTask
 class TaskServiceData:
     @staticmethod
     def insert_task_user(tarea: Tarea, usuario_tarea: list[UsuarioTarea]):
+        """
+        Inserta una tarea y sus relaciones con usuarios en la base de datos.
+
+        Args:
+            tarea (Tarea): Instancia de la tarea a guardar.
+            usuario_tarea (list[UsuarioTarea]): Lista de relaciones usuario-tarea.
+        """
         session.add_all([tarea])
         session.flush()
         for relacion in usuario_tarea:
@@ -26,6 +33,20 @@ class TaskServiceData:
                          fecha = None, prioridad = None, disponible = None,
                          realizado = None, detalle = None, archivado = None):
 
+        """
+        Actualiza los datos de una tarea relacionada a un usuario específico.
+
+        Args:
+            id_usuario (int): ID del usuario.
+            id_tarea (int): ID de la tarea.
+            nombre (str, optional): Nuevo nombre de la tarea.
+            fecha (date, optional): Nueva fecha programada.
+            prioridad (int, optional): Nueva prioridad.
+            disponible (bool, optional): Estado de disponibilidad.
+            realizado (bool, optional): Estado de realización.
+            detalle (str, optional): Nuevo detalle de la tarea.
+            archivado (bool, optional): Estado de archivado.
+        """
         updatedata = UpdateTask(id_tarea, id_usuario)
 
         if nombre:

@@ -1,3 +1,11 @@
+"""
+task_controller.py
+
+Este módulo contiene el controlador encargado de manejar la lógica relacionada
+con la gestión de tareas, como la recuperación, creación, modificación o eliminación
+de tareas de usuario.
+"""
+
 from xmlrpc.client import FastParser
 
 from src.modelo.service.session_service.session_manager import SessionManager
@@ -7,8 +15,15 @@ from src.modelo.service.user_service.user_service_data import UserServiceData
 from src.modelo.service.data_service.data_format import DataFormat
 
 class TaskController:
+    """Controlador para la gestión de tareas del usuario y de grupos."""
+
     @staticmethod
     def recover_tasks_today():
+        """Recupera las tareas programadas para el día actual del usuario en sesión.
+
+        Returns:
+            tuple: (bool, list|str) Resultado de la operación y datos o mensaje de error.
+        """
         try:
             resultados = TaskServiceData.get_tasks_session_user_list_today()
         except Exception as E:
@@ -19,9 +34,19 @@ class TaskController:
 
         return True, resultados
 
-
     @staticmethod
     def event_register_task_user(nombre: str, fecha: str, prioridad: int, detalle: str):
+        """Registra una nueva tarea para el usuario en sesión.
+
+        Args:
+            nombre (str): Nombre de la tarea.
+            fecha (str): Fecha programada.
+            prioridad (int): Prioridad entre 1 y 5.
+            detalle (str): Detalles de la tarea.
+
+        Returns:
+            tuple: (bool, str) Resultado y mensaje.
+        """
         is_tarea_create, response = TaskController.__create_tarea(nombre, fecha, prioridad, detalle)
         if not is_tarea_create:
             return is_tarea_create, response
@@ -29,7 +54,17 @@ class TaskController:
 
     @staticmethod
     def __create_tarea(nombre: str, fecha: str, prioridad: int, detalle: str) -> bool or Tarea:
+        """Crea una instancia de tarea validando fecha y prioridad.
 
+        Args:
+            nombre (str): Nombre de la tarea.
+            fecha (str): Fecha en formato string.
+            prioridad (int): Prioridad entre 1 y 5.
+            detalle (str): Detalles.
+
+        Returns:
+            tuple: (bool, Tarea|str) Resultado y tarea o mensaje de error.
+        """
         try:
             fecha = DataFormat.convertir_fecha(fecha)
         except Exception as E:
@@ -48,7 +83,15 @@ class TaskController:
 
     @staticmethod
     def validar_datos(fecha: str=None, prioridad: int=None):
+        """Valida los datos ingresados para fecha y prioridad.
 
+        Args:
+            fecha (str, optional): Fecha.
+            prioridad (int, optional): Prioridad.
+
+        Returns:
+            tuple: (bool, str) Resultado de validación y mensaje.
+        """
         try:
             DataFormat.convertir_fecha(fecha)
         except Exception as E:
@@ -69,6 +112,21 @@ class TaskController:
     def event_update_task_user(id_usuario, id_tarea, nombre = None,
                          fecha = None, prioridad= None, disponible=None,
                          realizado = None, detalle = None):
+        """Actualiza los campos modificables de una tarea.
+
+        Args:
+            id_usuario (int): ID del usuario.
+            id_tarea (int): ID de la tarea.
+            nombre (str, optional): Nombre nuevo.
+            fecha (str, optional): Nueva fecha.
+            prioridad (int, optional): Nueva prioridad.
+            disponible (bool, optional): Disponibilidad.
+            realizado (bool, optional): Estado de realización.
+            detalle (str, optional): Nuevos detalles.
+
+        Returns:
+            tuple: (bool, str) Resultado y mensaje.
+        """
         if not(nombre or fecha or prioridad or detalle) and disponible is None and realizado is None:
             return False, 'No hubo cambios.'
 
@@ -90,7 +148,15 @@ class TaskController:
     def event_update_task_session_manager(id_tarea, nombre=None,
                                fecha=None, prioridad=None, disponible=None,
                                realizado=None, detalle = None):
+        """Actualiza la tarea de un usuario en sesión.
 
+        Args:
+            id_tarea (int): ID de la tarea.
+            (otros argumentos opcionales): Nuevos valores para actualizar.
+
+        Returns:
+            tuple: (bool, str)
+        """
         return TaskController.event_update_task_user(id_usuario=SessionManager.get_instance().usuario.IDUsuario,
                                                      id_tarea=id_tarea, nombre=nombre,
                                                      fecha=fecha, prioridad=prioridad, disponible=disponible,
@@ -99,6 +165,18 @@ class TaskController:
 
     @staticmethod
     def event_edit_task_session_manager(id_tarea, nombre, fecha, prioridad, detalle):
+        """Edita los campos obligatorios de una tarea desde el usuario en sesión.
+
+        Args:
+            id_tarea (int): ID de la tarea.
+            nombre (str): Nuevo nombre.
+            fecha (str): Nueva fecha.
+            prioridad (int): Nueva prioridad.
+            detalle (str): Nuevos detalles.
+
+        Returns:
+            tuple: (bool, str)
+       """
         if not nombre or not fecha or not prioridad:
             return False, "No se puede dejar vació ningún campo."
 
@@ -118,6 +196,19 @@ class TaskController:
     @staticmethod
     def event_register_task_group(id_grupo, nombre: str, fecha: str, prioridad: int, detalle: str,
                                   miembros_disponible: list[[str, bool]] or str = 'all'): #lista (alias, disponible)
+        """Registra una nueva tarea para un grupo.
+
+        Args:
+            id_grupo (int): ID del grupo.
+            nombre (str): Nombre de la tarea.
+            fecha (str): Fecha de la tarea.
+            prioridad (int): Prioridad entre 1 y 5.
+            detalle (str): Detalles de la tarea.
+            miembros_disponible (list or str): Lista de tuplas (alias, disponible) o 'all'.
+
+        Returns:
+            tuple: (bool, str)
+        """
         is_tarea_create, response = TaskController.__create_tarea(nombre,fecha,prioridad,detalle)
         if miembros_disponible != 'all':
             miembros_id_disponible = [[UserServiceData.recover_id_user_for_alias(miembro), disponible]
@@ -132,6 +223,14 @@ class TaskController:
 
     @staticmethod
     def event_archive_task(id_tarea):
+        """Marca una tarea como archivada.
+
+        Args:
+            id_tarea (int): ID de la tarea.
+
+        Returns:
+            tuple: (bool, str)
+        """
         try:
             TaskServiceData.update_task_user(id_usuario=SessionManager.get_instance().usuario.IDUsuario,
                                              id_tarea=id_tarea, archivado=True)
@@ -141,6 +240,14 @@ class TaskController:
 
     @staticmethod
     def event_delete_task(id_tarea):
+        """Elimina lógicamente una tarea (soft delete).
+
+        Args:
+            id_tarea (int): ID de la tarea.
+
+        Returns:
+            tuple: (bool, str)
+        """
         try:
             TaskServiceData.soft_delete_task(id_tarea=id_tarea)
             return True, "Tarea eliminada"

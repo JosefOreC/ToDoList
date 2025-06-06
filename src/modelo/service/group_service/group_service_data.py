@@ -1,7 +1,7 @@
 """
-
-
+Módulo para la gestión de grupos y sus relaciones con usuarios.
 """
+
 from types import NoneType
 
 from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol, Usuario, UsuarioTarea
@@ -9,11 +9,18 @@ from src.modelo.database_management.base.declarative_base import session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
-
-
 class GroupServiceData:
     @staticmethod
     def insert_group(grupo: Grupo,relation_list: list[UsuarioGrupo]):
+        """Inserta un nuevo grupo junto con sus relaciones de usuario.
+
+        Args:
+            grupo (Grupo): Instancia del grupo a insertar.
+            relation_list (list[UsuarioGrupo]): Lista de relaciones UsuarioGrupo a asociar.
+
+        Raises:
+            Exception: Si ya existe un grupo con el mismo nombre.
+        """
         try:
             session.add_all([grupo])
             session.flush()
@@ -27,6 +34,14 @@ class GroupServiceData:
 
     @staticmethod
     def get_data_task_group_name(id_grupo):
+        """Obtiene el nombre de un grupo dado su ID.
+
+        Args:
+            id_grupo (int): ID del grupo.
+
+        Returns:
+            str or None: Nombre del grupo o None si no existe id_grupo.
+        """
         if id_grupo:
             return session.query(Grupo.Nombre).filter(Grupo.IDGrupo==id_grupo).first()[0]
         else:
@@ -34,11 +49,27 @@ class GroupServiceData:
 
     @staticmethod
     def get_all_members(id_grupo) -> list[int]:
+        """Obtiene los IDs de todos los miembros de un grupo.
+
+        Args:
+            id_grupo (int): ID del grupo.
+
+        Returns:
+            list[int]: Lista con IDs de usuarios miembros.
+        """
         response = session.query(UsuarioGrupo.IDUsuario).filter(UsuarioGrupo.IDGrupo==id_grupo).all()
         return [member[0] for member in response]
 
     @staticmethod
     def get_all_members_with_rol(id_grupo):
+        """Obtiene alias y rol de todos los miembros activos de un grupo.
+
+        Args:
+            id_grupo (int): ID del grupo.
+
+        Returns:
+            list[list]: Lista de [alias, rol] para cada miembro activo.
+        """
         response = (session.query(Usuario.Alias, UsuarioGrupo.rol)
                     .join(Usuario, Usuario.IDUsuario == UsuarioGrupo.IDUsuario)
                     .filter(UsuarioGrupo.IDGrupo == id_grupo, Usuario.Estado==True).all())
@@ -46,12 +77,28 @@ class GroupServiceData:
 
     @staticmethod
     def get_all_members_without_master(id_grupo) -> list[int]:
+        """Obtiene los IDs de todos los miembros activos de un grupo excepto el master.
+
+        Args:
+            id_grupo (int): ID del grupo.
+
+        Returns:
+            list[int]: Lista de IDs de usuarios excepto el master.
+        """
         response = session.query(UsuarioGrupo.IDUsuario).join(Usuario, Usuario.IDUsuario==UsuarioGrupo.IDUsuario).filter(
             UsuarioGrupo.IDGrupo==id_grupo, UsuarioGrupo.rol != Rol.master, Usuario.Estado==True).all()
         return [member[0] for member in response]
 
     @staticmethod
     def get_groups_editor_or_master(id_usuario):
+        """Obtiene los nombres de los grupos donde un usuario es editor o master.
+
+        Args:
+            id_usuario (int): ID del usuario.
+
+        Returns:
+            list[str]: Lista de nombres de grupos.
+        """
         response = (session.query(Grupo.Nombre).join(UsuarioGrupo, UsuarioGrupo.
                                           IDGrupo==Grupo.IDGrupo).
                                           filter(UsuarioGrupo.IDUsuario==id_usuario,
