@@ -39,8 +39,8 @@ class TaskServiceData:
         Args:
             id_usuario (int): ID del usuario.
             id_tarea (int): ID de la tarea.
-            nombre (str, optional): Nuevo nombre de la tarea.
-            fecha (date, optional): Nueva fecha programada.
+            nombre (str): Nuevo nombre de la tarea.
+            fecha (date): Nueva fecha programada.
             prioridad (int, optional): Nueva prioridad.
             disponible (bool, optional): Estado de disponibilidad.
             realizado (bool, optional): Estado de realización.
@@ -91,6 +91,10 @@ class TaskServiceData:
         return resultados
 
     @staticmethod
+    def __get_all_task():
+        return session.query(Tarea.Nombre, Tarea.Fecha_programada, Tarea.Detalle, Tarea.Prioridad, Tarea.Activo)
+
+    @staticmethod
     def get_tasks_user_list_all(usuario_id: int, activo=True, archivado=False):
 
         resultados = session.query(Tarea,
@@ -117,7 +121,7 @@ class TaskServiceData:
     
     @staticmethod
     def get_task(id_tarea):
-        return session.query(Tarea).filter_by(IDTarea=id_tarea).first()
+        return session.query(Tarea).filter_by(IDTarea=id_tarea).first().all()
             
     @staticmethod
     def soft_delete_task(id_tarea):
@@ -139,6 +143,8 @@ class TaskServiceData:
 
         session.delete(tarea)
         session.commit()
+
+
 
 
 

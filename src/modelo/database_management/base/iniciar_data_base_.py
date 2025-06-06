@@ -16,4 +16,4 @@ Session = sessionmaker(bind=engine)
 session = Session()
 
 
-print("Base de datos creada y usuario agregado.")
+print("Base de datos creada.")

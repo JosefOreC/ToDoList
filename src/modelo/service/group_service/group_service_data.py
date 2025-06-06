@@ -113,6 +113,16 @@ class GroupServiceData:
                                     UsuarioGrupo.rol == Rol.editor, UsuarioGrupo.rol == Rol.master)).all())
 
     @staticmethod
+    def __get_all_groups():
+        return session.query(Grupo.Nombre, Grupo.Descripcion, Grupo.IDMaster).all()
+
+    @staticmethod
+    def get_all_user_groups(id_usuario):
+        return (session.query(Grupo.IDGrupo, Grupo.Nombre, Grupo.Descripcion)
+                .join(UsuarioGrupo, UsuarioGrupo.IDGrupo==Grupo.IDGrupo)
+                .filter(UsuarioGrupo.IDUsuario==id_usuario).all())
+
+    @staticmethod
     def get_rol_in_group(id_usuario, id_grupo):
         try:
             return session.query(UsuarioGrupo.rol).filter_by(IDUsuario=id_usuario, IDGrupo=id_grupo).first()[0]

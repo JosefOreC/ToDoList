@@ -69,6 +69,9 @@ class UserServiceData:
             raise Exception("El alias ya está ocupado.")
 
     @staticmethod
+    def __get_all_users():
+        return session.query(Usuario.Alias, Usuario.Nombres, Usuario.Apellidos, Usuario.Estado).all()
+    @staticmethod
     def update_user(usuario: str or Usuario, nombres=None, apellidos=None, alias = None, password= None):
 
         update_data = UpdateUser(usuario)
@@ -97,4 +100,3 @@ class UserServiceData:
         usuario = UserServiceData.get_user_for_id_user(id_usuario)
         usuario.Estado = False
         session.commit()
-
