@@ -18,6 +18,11 @@ class Tarea(Base):
     Fecha_programada = Column(DATE)
     Prioridad = Column(Integer)
     Detalle = Column(String(500))
+    """
+        Tipo de checkeo - individual - no individual
+    """
+    Individual = Column(Boolean, default=True)
+
 
     tarea_usuarios = relationship('UsuarioTarea', back_populates='tarea')
 

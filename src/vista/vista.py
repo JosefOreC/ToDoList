@@ -379,7 +379,7 @@ class MainView:
                       (es_de_grupo and rol_usuario_en_grupo not in ['miembro']) or \
                       (not es_de_grupo) # Individual tasks always archivable by owner (disponible should be true)
 
-        can_delete = not es_de_grupo or rol_usuario_en_grupo not in ['miembro'] # Only non-members of group tasks, or masters/editors
+        can_delete = not es_de_grupo or rol_usuario_en_grupo not in ['miembro', 'editor'] # Only non-members of group tasks, or masters/editors
 
         realizado = tarea.get('realizado', False)
         check_bg = self.root.COLOR_SUCCESS if realizado else self.root.COLOR_DANGER
@@ -388,8 +388,7 @@ class MainView:
         btn_check = tk.Button(actions_frame, name=btn_check_name, text=check_text, bg=check_bg, fg=self.root.COLOR_TEXT_LIGHT,
                               font=self.root.FONT_BUTTON, relief='flat', width=3,
                               command=lambda id_t=task_id, idx=index: self.btn_check_task(id_t, idx))
-        if not can_check: btn_check.config(state='disabled', bg='#CCCCCC', fg='#666666', cursor="arrow")
-        else: btn_check.config(cursor="hand2")
+        btn_check.config(cursor="hand2")
         btn_check.pack(side='left', padx=1)
 
         btn_edit_name = f'btnEditTask_{task_id}_{index}'
@@ -413,7 +412,6 @@ class MainView:
         else: btn_archive.config(cursor="hand2")
         btn_archive.pack(side='left', padx=1)
 
-
         btn_delete_name = f'btnDeleteTask_{task_id}_{index}'
         btn_delete = tk.Button(actions_frame, name=btn_delete_name, text='Eliminar', bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT,
                                font=self.root.FONT_BUTTON, relief='flat',
@@ -425,13 +423,10 @@ class MainView:
     def btn_check_task(self, id_tarea_from_btn, indice):
         if not (0 <= indice < len(self.tareas)): return
         tarea_actual = self.tareas[indice]
-        if not tarea_actual.get('disponible', False):
-            messagebox.showinfo("Información", "No tienes permiso para marcar/desmarcar esta tarea.")
-            return
         nuevo_estado = not tarea_actual.get('realizado', False)
-        is_change_task, response = TaskController.event_update_task_session_manager(id_tarea_from_btn, realizado=nuevo_estado)
+        is_change_task, response = TaskController.event_check_in_task(id_tarea_from_btn, realizado=nuevo_estado)
         if is_change_task: self.refresh_tasks_view()
-        else: messagebox.showerror("Error", f"No se pudo actualizar la tarea:\n{response}")
+        else: messagebox.showerror("Error", f"{response}")
 
     def btn_edit_task(self, id_tarea_from_btn, indice):
         if not (0 <= indice < len(self.tareas)): return
@@ -608,7 +603,7 @@ class EditTaskView:
             update_payload['members_availability'] = members_availability_data
 
         # TaskController.event_update_task_session_manager should handle validation (e.g., for priority)
-        is_updated, response = TaskController.event_update_task_session_manager(
+        is_updated, response = TaskController.event_edit_task_session_manager(
             id_tarea=self.task_data.get('id_tarea'), # USE 'id_tarea'
             **update_payload
         )

@@ -6,11 +6,12 @@ con la gestión de tareas, como la recuperación, creación, modificación o eli
 de tareas de usuario.
 """
 
-from xmlrpc.client import FastParser
 
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.entities.tarea import Tarea
+from src.modelo.entities.rol import Rol
 from src.modelo.service.task_service.register_task import RegisterTask, TaskServiceData
+from src.modelo.service.group_service.group_service_data import GroupServiceData
 from src.modelo.service.user_service.user_service_data import UserServiceData
 from src.modelo.service.data_service.data_format import DataFormat
 
@@ -162,6 +163,13 @@ class TaskController:
                                                      fecha=fecha, prioridad=prioridad, disponible=disponible,
                                                      realizado=realizado, detalle=detalle)
 
+    @staticmethod
+    def event_check_in_task(id_tarea, realizado):
+        if not TaskServiceData.is_editable_task_for_user(id_tarea, SessionManager.get_id_user()):
+            return False, "El usuario no tiene permisos para checkear esta tarea."
+
+        return TaskController.event_update_task_session_manager(id_tarea, realizado=realizado)
+
 
     @staticmethod
     def event_edit_task_session_manager(id_tarea, nombre, fecha, prioridad, detalle):
@@ -179,6 +187,11 @@ class TaskController:
        """
         if not nombre or not fecha or not prioridad:
             return False, "No se puede dejar vació ningún campo."
+
+        if (id_grupo:=TaskServiceData.get_id_group_of_task(id_tarea)) is not None:
+            rol = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+            if rol == Rol.miembro:
+                return False, "No se tienen los permisos para editar la tarea"
 
         try:
             prioridad = int(prioridad)
@@ -248,6 +261,12 @@ class TaskController:
         Returns:
             tuple: (bool, str)
         """
+
+        if (id_grupo:=TaskServiceData.get_id_group_of_task(id_tarea)) is not None:
+            rol = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+            if rol in [Rol.miembro, Rol.editor]:
+                return False, "No se tienen los permisos para eliminar la tarea"
+
         try:
             TaskServiceData.soft_delete_task(id_tarea=id_tarea)
             return True, "Tarea eliminada"
