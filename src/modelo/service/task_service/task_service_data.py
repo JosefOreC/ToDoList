@@ -134,6 +134,19 @@ class TaskServiceData:
         return session.query(UsuarioTarea).filter_by(IDTarea=id_tarea).all()
 
     @staticmethod
+    def get_id_group_of_task(id_tarea):
+        response = session.query(UsuarioTarea.IDGrupo).filter_by(IDTarea=id_tarea).first()[0]
+        return response if response else None
+
+    @staticmethod
+    def is_editable_task_for_user(id_tarea, id_usuario):
+        """
+            Parametros: Id de la tarea e Id del usuario
+            Retorna si una tarea es editable para un usuario.
+        """
+        return session.query(UsuarioTarea.Disponible).filter_by(IDTarea=id_tarea, IDUsuario=id_usuario).first()[0]
+
+    @staticmethod
     def __delete_task(id_tarea):
 
         relaciones = TaskServiceData.get_relations_of_task(id_tarea)
