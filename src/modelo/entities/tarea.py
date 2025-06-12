@@ -21,7 +21,7 @@ class Tarea(Base):
     """
         Tipo de checkeo - individual - no individual
     """
-    Individual = Column(Boolean, default=True)
+    #Individual = Column(Boolean, default=True)
 
 
     tarea_usuarios = relationship('UsuarioTarea', back_populates='tarea')
