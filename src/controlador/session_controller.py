@@ -19,3 +19,15 @@ class SessionController:
             str: Alias del usuario autenticado.
         """
         return SessionManager.get_instance().usuario.Alias
+
+    @staticmethod
+    def get_grupos_session_manager():
+        return SessionManager.get_instance().usuario.grupos_relacion
+
+    @staticmethod
+    def get_grupos_master_session_manager():
+        return SessionManager.get_instance().usuario.grupos_master
+
+    @staticmethod
+    def get_tasks_session_manager():
+        return SessionManager.get_instance().usuario.usuario_tareas
