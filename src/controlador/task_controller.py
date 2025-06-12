@@ -13,7 +13,7 @@ from src.modelo.entities.rol import Rol
 from src.modelo.service.task_service.register_task import RegisterTask, TaskServiceData
 from src.modelo.service.group_service.group_service_data import GroupServiceData
 from src.modelo.service.user_service.user_service_data import UserServiceData
-from src.modelo.service.data_service.data_format import DataFormat
+from src.controlador.data_format import DataFormat
 
 class TaskController:
     """Controlador para la gestión de tareas del usuario y de grupos."""

@@ -5,9 +5,9 @@ desde la base de datos CRUD.
 
 
 from src.modelo.database_management.base.declarative_base import session
-from src.modelo.entities.modelo import UsuarioTarea, Tarea, Grupo
+from src.modelo.entities.modelo import UsuarioTarea, Tarea
 from src.modelo.service.session_service.session_manager import SessionManager
-from src.modelo.service.data_service.data_format import DataFormat
+from src.controlador.data_format import DataFormat
 from datetime import date
 from src.modelo.service.task_service.update_task import UpdateTask
 

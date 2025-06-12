@@ -8,7 +8,7 @@ y la recuperación de tareas programadas para el día actual, aplicando el forma
 
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.controlador.task_controller import TaskController
-from src.modelo.service.data_service.data_format import DataFormat
+from src.controlador.data_format import DataFormat
 
 class MainViewController:
     """Controlador de la vista principal. Maneja funciones clave como cerrar sesión
