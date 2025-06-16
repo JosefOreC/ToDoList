@@ -139,7 +139,8 @@ class DataFormat:
                  'fecha': tarea.Fecha_programada.strftime("%d-%m-%Y"),
                  'prioridad': tarea.Prioridad,
                  'nombre_prioridad': DataFormat.prioridades.get(tarea.Prioridad),
-                 'detalle': tarea.Detalle
+                 'detalle': tarea.Detalle,
+                 'archivado': archivado
             }
             response.append(data)
 

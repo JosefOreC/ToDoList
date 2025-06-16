@@ -13,6 +13,7 @@ from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.service.task_service.task_service_data import TaskServiceData
 from src.modelo.service.user_service.user_service_data import UserServiceData
 from src.modelo.service.data_service.data_format import DataFormat, date
+from src.modelo.entities.rol import Rol
 
 
 class GroupController:
@@ -249,4 +250,41 @@ class GroupController:
 
         return return_data(True, "Se recuperaron los datos", grupo=data_grupo, tareas= data_tasks,
                            usuario=data_user, miembros= data_members)
+
+
+    @staticmethod
+    def set_rol_member(alias_member: str, id_grupo: int, rol: Rol):
+        try:
+            id_member = UserServiceData.recover_id_user_for_alias(alias_member)
+        except Exception as E:
+            return {
+                'success': False,
+                'response': f'No se pudo recuperar los datos del usuario. \n{E}'
+            }
+
+        try:
+            GroupServiceData.change_rol_of_member(id_grupo, id_member, rol)
+            success = True
+            response = "Se guardaron los cambios."
+        except Exception as E:
+            success = False
+            response = f"No se pudo actualizar el rol del usuario {alias_member}. \n{E}"
+
+        return {
+            'success': success,
+            'response': response
+        }
+
+    @staticmethod
+    def set_rol_members(id_grupo: int, lista_cambios: list[str, Rol]):
+        bad_responses = []
+        for alias, rol in lista_cambios:
+            request = GroupController.set_rol_member(alias_member=alias, id_grupo=id_grupo, rol=rol)
+            if not request.get('success'):
+                bad_responses.append(request.get('response'))
+
+        return {
+            'success': True if not bad_responses else False,
+            'response': 'Se guardaron los cambios' if not bad_responses else bad_responses
+        }
 
