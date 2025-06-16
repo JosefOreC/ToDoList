@@ -58,7 +58,22 @@ class DataFormat:
         raise ValueError("Tipo de dato no soportado")
 
     @staticmethod
-    def convert_to_dict_task_data(tareas: [Tarea, bool, bool, int]):
+    def convert_to_dict_group_data(grupos: list):
+        data = []
+
+        for grupo in grupos:
+            dato = {
+                'id_grupo': grupo[0],
+                'nombre': grupo[1],
+                'descripcion': grupo[2],
+                'rol_usuario': grupo[3].name
+            }
+            data.append(dato)
+
+        return data
+
+    @staticmethod
+    def convert_to_dict_task_data(tareas: list[Tarea, bool, bool, int]):
         """Convierte una lista de tareas y su información asociada en una lista de diccionarios.
 
         Cada elemento de la lista de entrada debe tener la forma:
@@ -79,7 +94,7 @@ class DataFormat:
                 continue
             if id_grupo:
                 grupo = gsd.get_data_task_group_name(id_grupo)
-                rol = gsd.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+                rol = gsd.get_rol_in_group(SessionManager.get_id_user(), id_grupo).name
             else:
                 grupo = None
                 rol = None

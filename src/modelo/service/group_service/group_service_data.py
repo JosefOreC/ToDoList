@@ -73,7 +73,7 @@ class GroupServiceData:
         response = (session.query(Usuario.Alias, UsuarioGrupo.rol)
                     .join(Usuario, Usuario.IDUsuario == UsuarioGrupo.IDUsuario)
                     .filter(UsuarioGrupo.IDGrupo == id_grupo, Usuario.Estado==True).all())
-        return [[member[0], member[1]] for member in response]
+        return [[member[0], member[1].name] for member in response]
 
     @staticmethod
     def get_all_members_without_master(id_grupo) -> list[int]:
@@ -118,7 +118,7 @@ class GroupServiceData:
 
     @staticmethod
     def get_all_user_groups(id_usuario):
-        return (session.query(Grupo.IDGrupo, Grupo.Nombre, Grupo.Descripcion)
+        return (session.query(Grupo.IDGrupo, Grupo.Nombre, Grupo.Descripcion, UsuarioGrupo.rol)
                 .join(UsuarioGrupo, UsuarioGrupo.IDGrupo==Grupo.IDGrupo)
                 .filter(UsuarioGrupo.IDUsuario==id_usuario).all())
 

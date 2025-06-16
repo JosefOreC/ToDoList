@@ -2,10 +2,13 @@
 
 
 """
+from http.client import responses
+
 from sqlalchemy.exc import IntegrityError
 from src.modelo.service.group_service.register_group import RegisterGroup, GroupServiceData
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.service.user_service.user_service_data import UserServiceData
+from src.modelo.service.data_service.data_format import DataFormat
 
 
 class GroupController:
@@ -30,7 +33,7 @@ class GroupController:
                                                      id_master=SessionManager.get_instance().usuario.IDUsuario,
                                                      descripcion=descripcion)
 
-        miembros_id = [GroupController.add_member_group(miembro_alias)
+        miembros_id = [GroupController.recover_id_user(miembro_alias)
                        for miembro_alias in miembros_alias]
 
         try:
@@ -42,7 +45,7 @@ class GroupController:
             return False, f"No se pudo guardar el grupo. \n {E}"
 
     @staticmethod
-    def add_member_group(alias_usuario):
+    def recover_id_user(alias_usuario):
         """Recupera el ID de un usuario a partir de su alias.
 
         Args:
@@ -134,7 +137,7 @@ class GroupController:
         Returns:
             str: Rol del usuario dentro del grupo.
         """
-        return GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+        return GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo).name
 
     @staticmethod
     def get_group_master_alias(id_grupo):
@@ -161,8 +164,35 @@ class GroupController:
         """
         try:
             if isinstance(miembros, list):
-                miembros_id = [GroupController.add_member_group(miembro) for miembro in miembros]
+                miembros_id = [GroupController.recover_id_user(miembro)for miembro in miembros
+                               if not GroupController.is_member_in_group(id_grupo=id_grupo, alias_usuario=miembro)]
             else:
-                miembros_id = GroupController.add_member_group(miembros)
+                miembros_id = GroupController.recover_id_user(miembros)
         except Exception as E:
-            return False, f"No se puedo agregar los miembro(s). \n {E}"
+            return False, f"No se pudo agregar los miembro(s). \n {E}"
+
+
+        try:
+            GroupServiceData.add_members_in_group(id_grupo, miembros_id)
+            return True, "Se guardaron los nuevos miembros correctamente."
+        except Exception as E:
+            return False, f"No se pudo agregar los miembro(s). \n {E}"
+
+    @staticmethod
+    def get_all_groups_of_session_manager():
+        try:
+            resultados = GroupServiceData.get_all_user_groups(SessionManager.get_id_user())
+            success=True
+            response = "Se recuperaron los datos."
+        except Exception as E:
+            success=False
+            response = f"No se pudieron recuperar los datos. \n{E}"
+            resultados=None
+
+        return {
+            'success': success,
+            'response': response,
+            'data':{
+                'grupos': DataFormat.convert_to_dict_group_data(resultados) if resultados else None
+            }
+        }
