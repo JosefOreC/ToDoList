@@ -13,13 +13,13 @@ from src.modelo.entities.rol import Rol
 from src.modelo.service.task_service.register_task import RegisterTask, TaskServiceData
 from src.modelo.service.group_service.group_service_data import GroupServiceData
 from src.modelo.service.user_service.user_service_data import UserServiceData
-from src.modelo.service.data_service.data_format import DataFormat
+from src.modelo.service.data_service.data_format import DataFormat, datetime
 
 class TaskController:
     """Controlador para la gestión de tareas del usuario y de grupos."""
 
     @staticmethod
-    def recover_tasks_today():
+    def recover_tasks_today() -> dict['success': bool, 'response':str, 'data':dict['tareas':list]]:
         """Recupera las tareas programadas para el día actual del usuario en sesión.
 
         Returns:
@@ -27,13 +27,41 @@ class TaskController:
         """
         try:
             resultados = TaskServiceData.get_tasks_session_user_list_today()
+            success = True
+            response = f"Tareas recuperadas."
         except Exception as E:
-            return False, f"No se pudo recuperar las tareas. \n{E}"
+            success = False
+            response = f"No se pudo recuperar las tareas. \n{E}"
+            resultados = None
 
-        if not resultados:
-            return True, None
+        return {
+            'success': success,
+            'response': response,
+            'data': {
+                'tareas': resultados if resultados else None
+            }
+        }
 
-        return True, resultados
+    @staticmethod
+    def recover_task_date(fecha: datetime) -> dict['success': bool, 'response':str, 'data':dict['tareas':list]]:
+        try:
+            resultados = TaskServiceData.get_tasks_user_list_date(SessionManager.get_id_user(), fecha_inicio=fecha)
+            success = True
+            response = f"Tareas recuperadas."
+        except Exception as E:
+            success = False
+            response = f"No se pudo recuperar las tareas. \n{E}"
+            resultados = None
+
+        return {
+            'success': success,
+            'response': response,
+            'data': {
+                'tareas': resultados if resultados else None
+            }
+        }
+
+
 
     @staticmethod
     def event_register_task_user(nombre: str, fecha: str, prioridad: int, detalle: str):
@@ -67,7 +95,7 @@ class TaskController:
             tuple: (bool, Tarea|str) Resultado y tarea o mensaje de error.
         """
         try:
-            fecha = DataFormat.convertir_fecha(fecha)
+            fecha = DataFormat.convertir_data_to_date(fecha)
         except Exception as E:
             return False, f"Fecha no valida. Error {E}"
 
@@ -94,7 +122,7 @@ class TaskController:
             tuple: (bool, str) Resultado de validación y mensaje.
         """
         try:
-            DataFormat.convertir_fecha(fecha)
+            DataFormat.convertir_data_to_date(fecha)
         except Exception as E:
             return False, f"Fecha no valida. Error {E}"
 
@@ -133,7 +161,7 @@ class TaskController:
 
         if fecha:
             try:
-                fecha = DataFormat.convertir_fecha(fecha)
+                fecha = DataFormat.convertir_data_to_date(fecha)
             except ValueError as E:
                 return False, E
 

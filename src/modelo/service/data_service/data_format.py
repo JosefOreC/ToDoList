@@ -6,6 +6,7 @@ datos relacionados con tareas, como fechas y estructuras de salida compatibles
 con interfaces de usuario o APIs. Incluye integración con servicios de grupos
 y manejo de sesiones.
 """
+from sqlalchemy.testing import fails_on_everything_except
 
 from src.modelo.entities.tarea import Tarea
 from datetime import datetime, date
@@ -16,8 +17,10 @@ from src.modelo.service.session_service.session_manager import SessionManager
 class DataFormat:
     """Clase utilitaria para formateo y conversión de datos relacionados con tareas."""
 
+    prioridades = {1: 'Muy Alta', 2: 'Alta', 3: 'Media', 4: 'Baja', 5: 'Muy Baja'}
+
     @staticmethod
-    def convertir_fecha(fecha: str):
+    def convertir_data_to_date(fecha: str):
         """Convierte una cadena o un objeto datetime o date a un objeto date.
 
         Soporta:
@@ -34,17 +37,25 @@ class DataFormat:
         Raises:
             ValueError: Si el formato de la fecha no es soportado o inválido.
                 """
+        if isinstance(fecha, date):
+            return fecha
+
         if isinstance(fecha, str):
             try:
                 return datetime.strptime(fecha, "%d-%m-%Y").date()
             except:
                 raise ValueError("Formato de fecha no soportado")
-        elif isinstance(fecha, datetime):
+
+        if isinstance(fecha, datetime):
             return fecha.date()
-        elif isinstance(fecha, date):
-            return fecha
-        else:
-            raise ValueError("Formato de fecha no soportado")
+
+        raise ValueError("Formato de fecha no soportado")
+
+    @staticmethod
+    def convertir_date_to_str(fecha: datetime or date):
+        if isinstance(fecha, datetime or date):
+            return fecha.strftime("%d-%m-%Y")
+        raise ValueError("Tipo de dato no soportado")
 
     @staticmethod
     def convert_to_dict_task_data(tareas: [Tarea, bool, bool, int]):
@@ -78,6 +89,7 @@ class DataFormat:
                        'realizado': rea,
                        'fecha': tarea.Fecha_programada.strftime("%d-%m-%Y"),
                        'prioridad': tarea.Prioridad,
+                       'nombre_prioridad': DataFormat.prioridades.get(tarea.Prioridad),
                        'activo': tarea.Activo,
                        'detalle': tarea.Detalle,
                        'grupo': grupo,

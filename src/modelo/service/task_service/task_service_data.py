@@ -71,11 +71,11 @@ class TaskServiceData:
     def get_tasks_user_list_date(usuario_id: int, fecha_inicio: str or date, fecha_fin: str or date = None,
                                  activo = True,
                                  archivado = False):
-        fecha_inicio = DataFormat.convertir_fecha(fecha_inicio)
+        fecha_inicio = DataFormat.convertir_data_to_date(fecha_inicio)
         if not fecha_fin:
             fecha_fin = fecha_inicio
         else:
-            fecha_fin = DataFormat.convertir_fecha(fecha_fin)
+            fecha_fin = DataFormat.convertir_data_to_date(fecha_fin)
 
         if fecha_fin < fecha_inicio:
             raise Exception(f'La fecha de inicio {fecha_inicio} es mayor a la fecha de fin {fecha_fin}. '
