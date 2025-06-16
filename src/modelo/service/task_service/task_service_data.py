@@ -157,6 +157,22 @@ class TaskServiceData:
         session.delete(tarea)
         session.commit()
 
+    @staticmethod
+    def get_all_task_of_group_date(grupo_id, usuario_id: int, fecha_inicio: str or date,
+                                 activo = True):
+
+        fecha_inicio = DataFormat.convertir_data_to_date(fecha_inicio)
+
+        return (session.query(Tarea, UsuarioTarea.Archivado, UsuarioTarea.Realizado, UsuarioTarea.Disponible)
+        .join(UsuarioTarea, UsuarioTarea.IDTarea == Tarea.IDTarea)
+        .filter(
+                    UsuarioTarea.IDGrupo == grupo_id,
+                    Tarea.Fecha_programada == fecha_inicio,
+                    Tarea.Activo == activo,
+                    UsuarioTarea.IDUsuario == usuario_id
+        )).order_by(Tarea.Prioridad.asc()).all()
+
+
 
 
 

@@ -6,13 +6,15 @@ datos relacionados con tareas, como fechas y estructuras de salida compatibles
 con interfaces de usuario o APIs. Incluye integración con servicios de grupos
 y manejo de sesiones.
 """
-from sqlalchemy.testing import fails_on_everything_except
+from http.client import responses
 
+from sqlalchemy.testing import fails_on_everything_except
 from src.modelo.entities.tarea import Tarea
+from src.modelo.entities.grupo import Grupo
 from datetime import datetime, date
 from src.modelo.service.group_service.group_service_data import GroupServiceData as gsd
 from src.modelo.service.session_service.session_manager import SessionManager
-
+from src.modelo.entities.rol import Rol
 
 class DataFormat:
     """Clase utilitaria para formateo y conversión de datos relacionados con tareas."""
@@ -58,7 +60,7 @@ class DataFormat:
         raise ValueError("Tipo de dato no soportado")
 
     @staticmethod
-    def convert_to_dict_group_data(grupos: list):
+    def convert_to_dict_groups_data(grupos: list):
         data = []
 
         for grupo in grupos:
@@ -71,6 +73,14 @@ class DataFormat:
             data.append(dato)
 
         return data
+
+    @staticmethod
+    def convert_to_dict_group_data(grupo: Grupo) -> dict:
+        return {
+            'id_grupo': grupo.IDGrupo,
+            'nombre': grupo.Nombre,
+            'descripcion': grupo.Descripcion
+        }
 
     @staticmethod
     def convert_to_dict_task_data(tareas: list[Tarea, bool, bool, int]):
@@ -113,5 +123,36 @@ class DataFormat:
                        'is_in_group': True if id_grupo else False
                        }
             response.append(summary)
+
+        return response
+
+    @staticmethod
+    def convert_to_dict_task_data_groups(tareas: list[Tarea, Rol]):
+
+        response = []
+
+        for tarea, archivado, realizado, disponible in tareas:
+            data = {'id_tarea': tarea.IDTarea,
+                 'nombre': tarea.Nombre,
+                 'disponible': disponible,
+                 'realizado': realizado,
+                 'fecha': tarea.Fecha_programada.strftime("%d-%m-%Y"),
+                 'prioridad': tarea.Prioridad,
+                 'nombre_prioridad': DataFormat.prioridades.get(tarea.Prioridad),
+                 'detalle': tarea.Detalle
+            }
+            response.append(data)
+
+        return response
+
+    @staticmethod
+    def convert_to_dict_member_data_group(miembros: tuple)-> list[dict['alias', 'rol']]:
+        response = []
+        for alias, rol in miembros:
+            data = {
+                'alias': alias,
+                'rol': rol
+            }
+            response.append(data)
 
         return response

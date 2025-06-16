@@ -13,7 +13,7 @@ from src.modelo.entities.rol import Rol
 from src.modelo.service.task_service.register_task import RegisterTask, TaskServiceData
 from src.modelo.service.group_service.group_service_data import GroupServiceData
 from src.modelo.service.user_service.user_service_data import UserServiceData
-from src.modelo.service.data_service.data_format import DataFormat, datetime
+from src.modelo.service.data_service.data_format import DataFormat, datetime, date
 
 class TaskController:
     """Controlador para la gestión de tareas del usuario y de grupos."""
@@ -301,6 +301,27 @@ class TaskController:
         except:
             return False, "No se pudo eliminar la tarea."
 
+
+    @staticmethod
+    def get_tasks_of_group_date(fecha: date or datetime or str, id_grupo:int):
+        try:
+            resultados = TaskServiceData.get_all_task_of_group_date(grupo_id=id_grupo,
+                                                                    usuario_id=SessionManager.get_id_user(),
+                                                                    fecha_inicio=fecha)
+            success = True
+            response = "Se obtuvieron los datos."
+        except Exception as E:
+            success = False
+            response = f"No se pudieron recuperar los datos. \n{E}"
+            resultados = None
+
+        return {
+            'success': success,
+            'response': response,
+            'data':{
+                'tareas': DataFormat.convert_to_dict_task_data_groups(resultados) if resultados else None
+            }
+        }
 
 
 

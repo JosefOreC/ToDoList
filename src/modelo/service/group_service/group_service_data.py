@@ -33,6 +33,10 @@ class GroupServiceData:
             raise Exception('Ya existe un grupo con el mismo nombre.')
 
     @staticmethod
+    def get_group_for_id(id_grupo):
+        return session.query(Grupo).filter_by(IDGrupo=id_grupo).first()
+
+    @staticmethod
     def get_data_task_group_name(id_grupo):
         """Obtiene el nombre de un grupo dado su ID.
 

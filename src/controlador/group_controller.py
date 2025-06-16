@@ -5,10 +5,14 @@
 from http.client import responses
 
 from sqlalchemy.exc import IntegrityError
+
+from src.controlador.task_controller import TaskController
+from src.controlador.user_controller import UserController
 from src.modelo.service.group_service.register_group import RegisterGroup, GroupServiceData
 from src.modelo.service.session_service.session_manager import SessionManager
+from src.modelo.service.task_service.task_service_data import TaskServiceData
 from src.modelo.service.user_service.user_service_data import UserServiceData
-from src.modelo.service.data_service.data_format import DataFormat
+from src.modelo.service.data_service.data_format import DataFormat, date
 
 
 class GroupController:
@@ -193,6 +197,56 @@ class GroupController:
             'success': success,
             'response': response,
             'data':{
-                'grupos': DataFormat.convert_to_dict_group_data(resultados) if resultados else None
+                'grupos': DataFormat.convert_to_dict_groups_data(resultados) if resultados else None
             }
         }
+
+    @staticmethod
+    def get_data_to_view(id_grupo):
+        def return_data(success, response, grupo=None, tareas=None,usuario=None,miembros=None):
+            return {
+                'success': success,
+                'response': response,
+                'data':{
+                    'grupo': grupo,
+                    'tareas': tareas,
+                    'usuario': {
+                        'rol': usuario
+                    },
+                    'miembros': miembros
+                }
+            }
+
+        try:
+            data_grupo = GroupServiceData.get_group_for_id(id_grupo)
+        except Exception as E:
+            return return_data(False, f"No se pudieron recuperar los datos del grupo. \n{E}")
+
+        data_grupo = DataFormat.convert_to_dict_group_data(data_grupo)
+
+
+        data_tasks = TaskController.get_tasks_of_group_date(fecha=date.today(), id_grupo=id_grupo)
+
+        if not data_tasks.get('success'):
+            return return_data(False, response=f"No se pudieron recuperar los datos de tareas del grupo. "
+                                               f"\n{ data_tasks.get('response')}", grupo=data_grupo)
+
+        data_tasks = data_tasks.get('data').get('tareas')
+
+        try:
+            data_user = GroupController.get_rol_in_group(id_grupo)
+        except Exception as E:
+            return return_data(False, response=f'No se pudieron recuperar los datos del usuario \n{E}',
+                               grupo=data_grupo, tareas=data_tasks)
+
+        try:
+            data_members = GroupController.get_all_members_with_rol(id_grupo)
+        except Exception as E:
+            return return_data(False, response=f'No se pudieron recuperrar los miembros. \n{E}',
+                               grupo=data_grupo, tareas=data_tasks, usuario=data_user)
+
+        data_members = DataFormat.convert_to_dict_member_data_group(data_members)
+
+        return return_data(True, "Se recuperaron los datos", grupo=data_grupo, tareas= data_tasks,
+                           usuario=data_user, miembros= data_members)
+

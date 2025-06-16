@@ -318,8 +318,8 @@ class MainView:
                                 text='Refrescar 🔄', bg='#17A2B8', pack_info=pack_info_btn)
         self.root.create_button(container=header_frame, name='btnCrearTarea', funcion=self.go_to_create_tarea,
                                 text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY, pack_info=pack_info_btn)
-        self.root.create_button(container=header_frame, name='btnCrearGrupo', funcion=self.go_to_create_group,
-                                text='✚ Nuevo Grupo', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_btn)
+        self.root.create_button(container=header_frame, name='btnManageGroups', funcion=self.go_to_manage_groups,
+                                text='👥 Gestionar Grupos', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_btn)
         self.root.create_button(container=header_frame, name='btnMiPerfil', funcion=self.go_to_profile,
                                 text='Mi Perfil', bg='#6C757D',
                                 pack_info={'side': 'right', 'padx': 10, 'ipady': 3, 'ipadx': 10})
@@ -581,6 +581,9 @@ class MainView:
     def go_to_profile(self):
         ProfileView(root=self.root)
 
+    def go_to_manage_groups(self):
+        ManageGroupsView(root=self.root)
+
 class EditTaskView:
     def __init__(self, root: RootView, main_view: MainView, task_data: dict):
         self.root, self.main_view, self.task_data = root, main_view, task_data
@@ -679,7 +682,7 @@ class GroupRegisterView:
         if alias in self.miembros_alias:
             messagebox.showwarning(title="Miembro Duplicado", message=f"El usuario '{alias}' ya está en la lista.")
             return
-        is_valid, response = GroupController.is_user_exits(alias=alias)
+        is_valid, response = GroupController.is_user_exits(alias_usuario=alias)
         if is_valid:
             self.miembros_alias.append(alias)
             self.update_members_display()
@@ -826,3 +829,176 @@ class RegisterTareaUserView:
 
     def btn_volver(self): MainView(root=self.root)
     def btn_aceptar_crear_tarea(self): MainView(root=self.root)
+
+
+class ManageGroupsView:
+    def __init__(self, root: 'RootView'):
+        self.root = root
+        # Atributos para la paginación
+        self.todos_los_grupos = []
+        self.current_page = 1
+        self.groups_per_page = 20
+        self.total_pages = 1
+
+        # Widgets
+        self.groups_frame = None
+        self.pagination_frame = None
+
+        self.create_manage_groups_interface()
+
+    def create_manage_groups_interface(self):
+        self.root.limpiar_componentes()
+        content_frame = tk.Frame(self.root.root, bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
+        content_frame.pack(fill='both', expand=True)
+
+        header_frame = tk.Frame(content_frame, bg=content_frame.cget('bg'))
+        header_frame.pack(fill='x', pady=(0, 20))
+
+        tk.Label(header_frame, text="Gestionar Grupos", font=self.root.FONT_TITLE, bg=header_frame.cget('bg')).pack(
+            side='left')
+
+        self.root.create_button(container=header_frame, name='btnBackToMain', funcion=self.go_to_main_view,
+                                text='← Volver a Tareas', bg='#6C757D',
+                                pack_info={'side': 'right', 'padx': 5, 'ipady': 3, 'ipadx': 10})
+        self.root.create_button(container=header_frame, name='btnCreateGroup', funcion=self.go_to_create_group,
+                                text='✚ Nuevo Grupo', bg=self.root.COLOR_SUCCESS,
+                                pack_info={'side': 'right', 'padx': 5, 'ipady': 3, 'ipadx': 10})
+
+        # --- CORRECCIÓN: El frame ahora solo contendrá la rejilla ---
+        self.groups_frame = tk.Frame(content_frame, bg=content_frame.cget('bg'))
+        self.groups_frame.pack(fill='both', expand=True)
+
+        self.pagination_frame = tk.Frame(content_frame, bg=content_frame.cget('bg'))
+        self.pagination_frame.pack(fill='x', pady=(10, 0))
+
+        self.setup_groups_display()
+
+    def setup_groups_display(self):
+        request = GroupController.get_all_groups_of_session_manager()
+
+        if not request['success']:
+            messagebox.showerror(title="Error", message=request['response'])
+            self.todos_los_grupos = []
+        else:
+            self.todos_los_grupos = request['data']['grupos'] or []
+
+        num_groups = len(self.todos_los_grupos)
+        self.total_pages = (num_groups + self.groups_per_page - 1) // self.groups_per_page or 1
+        self.current_page = 1
+
+        self.display_current_page()
+        self.setup_pagination_controls()
+
+    def display_current_page(self):
+        for widget in self.groups_frame.winfo_children():
+            widget.destroy()
+
+        if not self.todos_los_grupos:
+            self.root.create_label(container=self.groups_frame, name='lblNoGroups',
+                                   text='No perteneces a ningún grupo.', fg='#6C757D',
+                                   font_style=("Helvetica", 14, "italic"), pack_info={'pady': 20})
+            if self.pagination_frame: self.pagination_frame.pack_forget()
+            return
+
+        # --- INICIO DE LA CORRECCIÓN ---
+        # 1. Configurar las columnas en el frame principal UNA SOLA VEZ.
+        headers = ["Nombre", "Descripción", "Rol", "Acciones"]
+        col_weights = [2, 5, 2, 3]  # Ajustar pesos para mejor distribución
+        for i, weight in enumerate(col_weights):
+            self.groups_frame.grid_columnconfigure(i, weight=weight)
+
+        # 2. Dibujar las cabeceras directamente en la rejilla principal.
+        header_bg = self.root.COLOR_FRAME
+        for i, header in enumerate(headers):
+            # Usamos un Frame para poder aplicar un padding y color de fondo consistentes
+            header_cell = tk.Frame(self.groups_frame, bg=header_bg)
+            header_cell.grid(row=0, column=i, sticky='nsew')
+            tk.Label(header_cell, text=header, font=self.root.FONT_LABEL, bg=header_bg).pack(padx=5, pady=5, anchor='w')
+
+        # 3. Dibujar las filas de datos.
+        start_index = (self.current_page - 1) * self.groups_per_page
+        groups_to_display = self.todos_los_grupos[start_index: start_index + self.groups_per_page]
+
+        for i, group_data in enumerate(groups_to_display):
+            # La fila de la rejilla es `i + 1` porque la fila 0 es la cabecera.
+            self.insert_group_row(group=group_data, row_index=i + 1)
+        # --- FIN DE LA CORRECCIÓN ---
+
+        self.update_pagination_controls()
+
+    def insert_group_row(self, group: dict, row_index: int):
+        """Inserta una fila directamente en la rejilla principal de `groups_frame`."""
+        # --- CORRECCIÓN: Se eliminó el `row_frame` independiente. ---
+
+        # Alternar color de fondo para mejorar la legibilidad
+        bg_color = self.root.COLOR_BACKGROUND if row_index % 2 != 0 else self.root.COLOR_FRAME
+
+        # Crear celdas (Labels) y posicionarlas en la rejilla principal
+        # Celda de Nombre
+        name_label = tk.Label(self.groups_frame, text=group.get('nombre', 'N/A'), bg=bg_color, anchor='w', padx=5,
+                              pady=5)
+        name_label.grid(row=row_index, column=0, sticky='nsew')
+
+        # Celda de Descripción
+        desc_label = tk.Label(self.groups_frame, text=group.get('descripcion', ''), bg=bg_color, anchor='w',
+                              wraplength=450, justify='left', padx=5, pady=5)
+        desc_label.grid(row=row_index, column=1, sticky='nsew')
+
+        # Celda de Rol
+        role_label = tk.Label(self.groups_frame, text=group.get('rol_usuario', 'N/A').capitalize(), bg=bg_color,
+                              anchor='w', padx=5, pady=5)
+        role_label.grid(row=row_index, column=2, sticky='nsew')
+
+        # Celda de Acciones
+        actions_frame = tk.Frame(self.groups_frame, bg=bg_color)
+        actions_frame.grid(row=row_index, column=3, sticky='nsew', padx=5, pady=5)
+
+        # Botones de acción (placeholders)
+        tk.Button(actions_frame, text="Ver", state='disabled', font=("Helvetica", 9)).pack(side='left', padx=2)
+        tk.Button(actions_frame, text="Editar", state='disabled', font=("Helvetica", 9)).pack(side='left', padx=2)
+        tk.Button(actions_frame, text="Salir", state='disabled', font=("Helvetica", 9), bg='#E74C3C', fg='white').pack(
+            side='left', padx=2)
+
+    # --- El resto de los métodos (paginación, navegación) no cambian ---
+    def setup_pagination_controls(self):
+        for widget in self.pagination_frame.winfo_children(): widget.destroy()
+        if not self.todos_los_grupos:
+            if hasattr(self, 'prev_button'):
+                self.prev_button.pack_forget()
+                self.page_label.pack_forget()
+                self.next_button.pack_forget()
+            return
+
+        self.pagination_frame.pack(fill='x', pady=(10, 0))  # Asegurarse de que sea visible
+        self.prev_button = tk.Button(self.pagination_frame, text="◀ Anterior", command=self.prev_page,
+                                     font=self.root.FONT_BUTTON, relief='flat', cursor="hand2")
+        self.prev_button.pack(side='left', padx=10)
+        self.page_label = tk.Label(self.pagination_frame, text="", font=("Helvetica", 12, "bold"),
+                                   bg=self.pagination_frame.cget('bg'))
+        self.page_label.pack(side='left', expand=True)
+        self.next_button = tk.Button(self.pagination_frame, text="Siguiente ▶", command=self.next_page,
+                                     font=self.root.FONT_BUTTON, relief='flat', cursor="hand2")
+        self.next_button.pack(side='right', padx=10)
+        self.update_pagination_controls()
+
+    def update_pagination_controls(self):
+        if not hasattr(self, 'page_label') or not self.page_label: return
+        self.page_label.config(text=f"Página {self.current_page} de {self.total_pages}")
+        self.prev_button.config(state='normal' if self.current_page > 1 else 'disabled')
+        self.next_button.config(state='normal' if self.current_page < self.total_pages else 'disabled')
+
+    def next_page(self):
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            self.display_current_page()
+
+    def prev_page(self):
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.display_current_page()
+
+    def go_to_main_view(self):
+        MainView(root=self.root)
+
+    def go_to_create_group(self):
+        GroupRegisterView(root=self.root)
