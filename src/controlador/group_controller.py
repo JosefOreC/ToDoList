@@ -2,15 +2,11 @@
 
 
 """
-from http.client import responses
-
 from sqlalchemy.exc import IntegrityError
 
 from src.controlador.task_controller import TaskController
-from src.controlador.user_controller import UserController
 from src.modelo.service.group_service.register_group import RegisterGroup, GroupServiceData
 from src.modelo.service.session_service.session_manager import SessionManager
-from src.modelo.service.task_service.task_service_data import TaskServiceData
 from src.modelo.service.user_service.user_service_data import UserServiceData
 from src.modelo.service.data_service.data_format import DataFormat, date
 from src.modelo.entities.rol import Rol
@@ -276,7 +272,7 @@ class GroupController:
         }
 
     @staticmethod
-    def set_rol_members(id_grupo: int, lista_cambios: list[str, Rol]):
+    def set_rol_members(id_grupo: int, lista_cambios: list[list[str, Rol]]):
         bad_responses = []
         for alias, rol in lista_cambios:
             request = GroupController.set_rol_member(alias_member=alias, id_grupo=id_grupo, rol=rol)

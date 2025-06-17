@@ -8,13 +8,14 @@ from tkinter import messagebox
 from tkinter import Text
 from src.controlador.login_controller import LoginController
 from src.controlador.session_controller import SessionController
-from src.controlador.group_controller import GroupController
+from src.controlador.group_controller import GroupController, Rol
 from src.controlador.task_controller import TaskController
 from src.controlador.user_controller import UserController
 from src.controlador.register_controller import RegisterUserController
 from src.controlador.main_view_controller import MainViewController
 import datetime
 import calendar
+
 
 class RootView:
     # --- TEMA DE LA APLICACIÓN ---
@@ -496,17 +497,21 @@ class MainView:
                                 command=lambda t=tarea: self.show_task_details(tarea=t), cursor="hand2")
         btn_details.pack(side='left', padx=2)
 
-        btn_edit = tk.Button(actions_frame, text='Editar', bg='#6C757D', fg=self.root.COLOR_TEXT_LIGHT,
-                             font=self.root.FONT_BUTTON, relief='flat',
-                             command=lambda id_t=task_id: self.btn_edit_task(id_tarea=id_t))
-        btn_edit.config(state='normal' if can_edit else 'disabled', cursor="hand2" if can_edit else "arrow")
-        btn_edit.pack(side='left', padx=2)
+        if can_edit:
+            btn_edit = tk.Button(actions_frame, text='Editar', bg='#6C757D', fg=self.root.COLOR_TEXT_LIGHT,
+                                 font=self.root.FONT_BUTTON, relief='flat',
+                                 command=lambda id_t=task_id: self.btn_edit_task(id_tarea=id_t))
+            btn_edit.config(state='normal' if can_edit else 'disabled', cursor="hand2" if can_edit else "arrow")
+            btn_edit.pack(side='left', padx=2)
 
         btn_archive = tk.Button(actions_frame, text='Archivar', bg='#5D6D7E', fg=self.root.COLOR_TEXT_LIGHT,
                                 font=self.root.FONT_BUTTON, relief='flat',
                                 command=lambda id_t=task_id: self.btn_archive_task(id_tarea=id_t))
-        btn_archive.config(state='normal' if can_archive else 'disabled', cursor="hand2" if can_archive else "arrow")
+        btn_archive.config(state='normal', cursor="hand2")
         btn_archive.pack(side='left', padx=2)
+
+        if not can_delete:
+            return
 
         btn_delete = tk.Button(actions_frame, text='Eliminar', bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT,
                                font=self.root.FONT_BUTTON, relief='flat',
@@ -583,8 +588,11 @@ class MainView:
     def go_to_manage_groups(self):
         ManageGroupsView(root=self.root)
 
+    def refresh_view(self):
+        self.setup_task_display()
+
 class EditTaskView:
-    def __init__(self, root: RootView, main_view: MainView, task_data: dict):
+    def __init__(self, root: RootView, main_view, task_data: dict):
         self.root, self.main_view, self.task_data = root, main_view, task_data
         self.top = Toplevel(root.root)
         self.top.title("Editar Tarea")
@@ -633,7 +641,7 @@ class EditTaskView:
         is_updated, response = TaskController.event_edit_task_session_manager(id_tarea=self.task_data.get('id_tarea'), **update_payload)
         if is_updated:
             messagebox.showinfo(title="Edición Exitosa", message=response)
-            MainView(root=self.root)
+            self.main_view.refresh_view()
             self.close_window()
         else:
             messagebox.showerror(title="Error al Guardar", message=response)
@@ -770,65 +778,250 @@ class RegisterTareaUserView:
     def __init__(self, root: 'RootView'):
         self.root = root
         self.selected_group_id = None
-        self.current_user_alias = SessionController.get_alias_user()
-        self.members_to_assign = {}
-        # NOTE: La lógica completa de asignación de miembros no está implementada
-        # en este ejemplo para mantenerlo conciso, pero la estructura está aquí.
+        self.current_user_alias = SessionController.get_alias_user() # Use SessionController
+        self.master_alias_of_selected_group = None
+        self.all_group_members_data = {}  # Stores {alias: rol}
+        self.members_to_assign = {} # {alias: {'var': BooleanVar, 'rol': str, 'is_fixed': bool}}
+        self.member_display_frames = {}
+        self.selected_date = datetime.date.today()
+        self.date_display_label = None
+
         self.create_fomulate_tarea()
+
 
     def create_fomulate_tarea(self):
         self.root.limpiar_componentes()
         outer_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=30, pady=30)
         outer_frame.pack(expand=True, fill='both')
-        self.root.create_label(container=outer_frame, name='lblCreateTaskTitle', text='Registrar Nueva Tarea', font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 15)})
-        form_content_frame = tk.Frame(outer_frame, bg=outer_frame.cget('bg'))
+
+        self.root.create_label(outer_frame, name='lblCreateTaskTitle', text='Registrar Nueva Tarea', font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 15)})
+
+        # Main form content in a scrollable area
+        canvas = tk.Canvas(outer_frame, bg=outer_frame.cget('bg'), highlightthickness=0)
+        scrollbar = ttk.Scrollbar(outer_frame, orient="vertical", command=canvas.yview)
+        scrollable_form_frame = tk.Frame(canvas, bg=outer_frame.cget('bg'))
+
+        scrollable_form_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scrollable_form_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # --- Content of the form goes into scrollable_form_frame ---
+        form_content_frame = tk.Frame(scrollable_form_frame, bg=outer_frame.cget('bg'))
         form_content_frame.pack(expand=True, fill='x')
-        form_content_frame.grid_columnconfigure(1, weight=1)
-        labels = ['Nombre de la Tarea:', 'Fecha (dd-mm-aaaa):', 'Prioridad (1-5):', 'Detalle:']
-        names = ['inpNombreCreateTareaUser', 'inpFechaProgramadaCreateTareaUser', 'inpPrioridadCreateTarea', 'inpDetalleCreateTarea']
-        for i, text in enumerate(labels):
-             tk.Label(form_content_frame, text=text, font=self.root.FONT_LABEL, bg=form_content_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).grid(row=i, column=0, sticky='nw', pady=5, padx=5)
-             if text == 'Detalle:':
-                 inp = Text(form_content_frame, font=self.root.FONT_BODY, relief='solid', borderwidth=1, height=6, wrap=tk.WORD)
-                 inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5)
-             else:
-                 inp = tk.Entry(form_content_frame, font=self.root.FONT_BODY, relief='solid', borderwidth=1)
-                 inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5, ipady=4)
-             self.root.componentes[names[i]] = inp
-        action_buttons = tk.Frame(outer_frame, bg=outer_frame.cget('bg'))
-        action_buttons.pack(pady=(15,0), fill='x')
-        self.root.create_button(container=action_buttons, name='btnRegistrarTarea', funcion=self.btn_registrar_tarea, text='Guardar Tarea', bg=self.root.COLOR_SUCCESS, pack_info={'side': 'left', 'expand': True, 'padx': 5, 'ipady':3})
-        self.root.create_button(container=action_buttons, name='btnVolver', funcion=self.btn_volver, text='Volver', bg='#6C757D', pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady':3})
+        form_content_frame.grid_columnconfigure(1, weight=1) # Allow inputs to expand
+
+        labels_texts = ['Nombre de la Tarea:', 'Fecha:', 'Prioridad (1-5):', 'Detalle:']
+        inputs_names = ['inpNombreCreateTareaUser', 'inpFechaProgramadaCreateTareaUser', 'inpPrioridadCreateTarea',
+                        'inpDetalleCreateTarea']
+        for i, text in enumerate(labels_texts):
+            tk.Label(form_content_frame, text=text, font=self.root.FONT_LABEL, bg=form_content_frame.cget('bg')).grid(
+                row=i, column=0, sticky='nw', pady=5, padx=5)
+            if text == 'Detalle:':
+                inp = Text(form_content_frame, font=self.root.FONT_BODY, height=6, wrap=tk.WORD, relief='solid',
+                           borderwidth=1)
+                inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5)
+            elif text == 'Fecha:':
+                date_frame = tk.Frame(form_content_frame, bg=form_content_frame.cget('bg'))
+                date_frame.grid(row=i, column=1, sticky='ew', pady=5, padx=5)
+                self.date_display_label = tk.Label(date_frame, text=self.selected_date.strftime('%d-%m-%Y'),
+                                                   font=self.root.FONT_BODY, relief='solid', borderwidth=1, anchor='w')
+                self.date_display_label.pack(side='left', fill='x', expand=True, ipady=4, padx=(0, 5))
+                tk.Button(date_frame, text="📅", command=self.open_calendar, relief='flat').pack(side='left')
+                inp = self.date_display_label  # El input "lógico" ahora es el label
+            else:
+                inp = tk.Entry(form_content_frame, font=self.root.FONT_BODY, relief='solid', borderwidth=1)
+                inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5, ipady=4)
+            self.root.componentes[inputs_names[i]] = inp
+
+        # Group Selection
+        row_idx = len(labels_texts)
+        tk.Label(form_content_frame, text='Pertenencia a Grupo:', font=self.root.FONT_LABEL, bg=form_content_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).grid(row=row_idx, column=0, sticky='w', pady=5, padx=5)
+        groups = GroupController.get_groups_editable() # Uses actual controller
+        self.group_options = {"Seleccionar Grupo": None}; self.group_options.update({name: id_ for id_, name in groups})
+        self.group_combobox_var = tk.StringVar(value="Seleccionar Grupo")
+        group_combobox = ttk.Combobox(form_content_frame, textvariable=self.group_combobox_var, values=list(self.group_options.keys()), state='readonly', font=self.root.FONT_BODY, width=30)
+        group_combobox.grid(row=row_idx, column=1, sticky='ew', pady=5, padx=5, ipady=2); row_idx += 1
+        group_combobox.bind("<<ComboboxSelected>>", self.on_group_selected); self.root.componentes['cmbGroupSelection'] = group_combobox
+
+        # Assignment Type (Todos / Personalizado)
+        self.assignment_frame = tk.Frame(form_content_frame, bg=form_content_frame.cget('bg'))
+        self.assignment_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10,0)); row_idx += 1
+        self.assignment_frame.grid_remove()
+        self.assignment_type_var = tk.StringVar(value="todos")
+        tk.Radiobutton(self.assignment_frame, text="Asignar a Todos los Miembros", variable=self.assignment_type_var, value="todos", font=self.root.FONT_BODY, bg=self.assignment_frame.cget('bg'), command=self.on_assignment_type_changed, activebackground=self.assignment_frame.cget('bg')).pack(side='left', padx=5)
+        tk.Radiobutton(self.assignment_frame, text="Asignación Personalizada", variable=self.assignment_type_var, value="personalizado", font=self.root.FONT_BODY, bg=self.assignment_frame.cget('bg'), command=self.on_assignment_type_changed, activebackground=self.assignment_frame.cget('bg')).pack(side='left', padx=5)
+
+        # Member Selection (Personalizado)
+        self.members_selection_frame = tk.Frame(form_content_frame, bg=form_content_frame.cget('bg'))
+        self.members_selection_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=5); row_idx += 1
+        self.members_selection_frame.grid_remove()
+        self.members_selection_frame.grid_columnconfigure(1, weight=1) # Allow combobox to expand
+
+        tk.Label(self.members_selection_frame, text='Añadir Miembro Específico:', font=self.root.FONT_LABEL, bg=self.members_selection_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).grid(row=0, column=0, sticky='w', pady=(5,0), padx=5)
+        self.member_combobox_var = tk.StringVar()
+        self.member_combobox = ttk.Combobox(self.members_selection_frame, textvariable=self.member_combobox_var, state='readonly', font=self.root.FONT_BODY, width=28)
+        self.member_combobox.grid(row=0, column=1, sticky='ew', pady=5, padx=5, ipady=2)
+        self.member_combobox.bind("<<ComboboxSelected>>", self.add_selected_member_from_combobox)
+        self.root.componentes['cmbMemberSelection'] = self.member_combobox
+
+        self.selected_members_display_frame = tk.Frame(self.members_selection_frame, bg=self.root.COLOR_BACKGROUND, relief="sunken", borderwidth=1, padx=5, pady=5)
+        self.selected_members_display_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', pady=(5,10), ipady=5)
+        # self.members_selection_frame.grid_rowconfigure(1, weight=1) # Allow this to expand a bit
+
+
+        # Action Buttons (outside scrollable area, directly in outer_frame)
+        action_buttons_frame = tk.Frame(outer_frame, bg=outer_frame.cget('bg'))
+        action_buttons_frame.pack(pady=(15,0), fill='x')
+        self.root.create_button(action_buttons_frame, name='btnRegistrarTareaCreateTarea', text='Guardar Tarea', funcion=self.btn_registrar_tarea, bg=self.root.COLOR_SUCCESS, pack_info={'side': 'left', 'expand': True, 'padx': 5, 'ipady':3})
+        self.root.create_button(action_buttons_frame, name='btnVolverCreateTareaUser', text='Volver', funcion=self.btn_volver, bg='#6C757D', pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady':3})
+        self.lbl_task_response = self.root.create_label(outer_frame, 'lblTaskResponseCreate', '', pack_info={'pady': (10,0), 'fill':'x'})
+        self.lbl_task_response.config(wraplength=400)
+
+    def open_calendar(self):
+        CalendarPicker(parent=self.root.root, on_date_select_callback=self.on_date_selected)
+
+    def on_date_selected(self, new_date: datetime.date):
+        self.selected_date = new_date
+        self.date_display_label.config(text=self.selected_date.strftime('%d-%m-%Y'))
+
+    def on_group_selected(self, event=None):
+        selected_name = self.group_combobox_var.get()
+        self.selected_group_id = self.group_options.get(selected_name)
+        self.master_alias_of_selected_group = None
+        self.all_group_members_data.clear()
+        self.clear_members_display_and_assignment()
+
+        if self.selected_group_id:
+            self.assignment_frame.grid()
+            self.master_alias_of_selected_group = GroupController.get_group_master_alias(self.selected_group_id) # Uses actual controller
+            self.load_group_members_data()
+            self.on_assignment_type_changed() # This will set defaults for "Personalizado"
+        else:
+            self.assignment_frame.grid_remove()
+            self.members_selection_frame.grid_remove()
+
+    def on_assignment_type_changed(self, event=None):
+        self.clear_members_display_and_assignment()  # Important to clear before adding defaults
+
+        if self.assignment_type_var.get() == "personalizado" and self.selected_group_id:
+            self.members_selection_frame.grid()
+
+            # 1. Add Master by default (if they exist and are part of the group members list)
+            if self.master_alias_of_selected_group and self.master_alias_of_selected_group in self.all_group_members_data:
+                self.add_member_to_assign_list(self.master_alias_of_selected_group, True, is_fixed=True)
+
+            # 2. Add Current User (Task Creator) if they are part of the group and not already added as master
+            # The fact that they could select this group implies they are master or editor.
+            # So, we just need to check if they are in the group's member list and not the master (if master was already added).
+            if self.current_user_alias in self.all_group_members_data and \
+                    self.current_user_alias != self.master_alias_of_selected_group:
+                self.add_member_to_assign_list(self.current_user_alias, True, is_fixed=True)
+
+            self.update_member_combobox()
+        else:
+            self.members_selection_frame.grid_remove()
+
+    def load_group_members_data(self):
+        self.all_group_members_data.clear()
+        if self.selected_group_id:
+            members_with_roles = GroupController.get_all_members_with_rol(self.selected_group_id) # Uses actual controller
+            for alias, rol in members_with_roles: self.all_group_members_data[alias] = rol
+
+    def update_member_combobox(self):
+        # C.1 & C.2: Show "alias (rol)", exclude already fixed/added members
+        available_for_combobox = [f"{alias} ({rol})" for alias, rol in self.all_group_members_data.items()
+                                  if alias not in self.members_to_assign]
+        self.member_combobox['values'] = available_for_combobox
+        if available_for_combobox: self.member_combobox.set('Seleccionar para Añadir')
+        else: self.member_combobox.set('No más miembros'); self.member_combobox_var.set('')
+
+    def clear_members_display_and_assignment(self):
+        for frame in self.member_display_frames.values():
+            if frame.winfo_exists(): frame.destroy()
+        self.member_display_frames.clear()
+        self.members_to_assign.clear()
+
+    def add_selected_member_from_combobox(self, event=None):
+        selected_display_string = self.member_combobox_var.get()
+        if not selected_display_string or selected_display_string in ['Seleccionar para Añadir', 'No más miembros']: return
+        alias = selected_display_string.split(" (")[0] # Parse alias
+        if alias and alias not in self.members_to_assign:
+            self.add_member_to_assign_list(alias, True, is_fixed=False)
+            self.update_member_combobox()
+
+    def add_member_to_assign_list(self, alias, disponible: bool, is_fixed: bool):
+        if alias not in self.members_to_assign:
+            var = tk.BooleanVar(value=disponible)
+            rol = self.all_group_members_data.get(alias, 'miembro')
+            self.members_to_assign[alias] = {'var': var, 'rol': rol, 'is_fixed': is_fixed}
+            self.display_assigned_member(alias, var, rol, is_fixed)
+
+    def display_assigned_member(self, alias, var, rol, is_fixed):
+        member_frame_name = f"member_assign_frame_{alias}"
+        # self.root.comprobate_existe(member_frame_name) # Not needed if clearing display_frame children
+
+        member_frame = tk.Frame(self.selected_members_display_frame, bg=self.root.COLOR_FRAME, padx=5, pady=2)
+        member_frame.pack(fill='x', pady=1) # Keep compact
+        self.member_display_frames[alias] = member_frame # For potential direct destruction
+
+        lbl_alias_rol = tk.Label(member_frame, text=f"{alias} ({rol})", font=self.root.FONT_BODY, bg=member_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK, anchor='w')
+        lbl_alias_rol.pack(side='left', padx=(0,10), fill='x', expand=True)
+
+        disponible_cb = tk.Checkbutton(member_frame, text="Disp.", variable=var, font=("Helvetica", 10), bg=member_frame.cget('bg'), activebackground=member_frame.cget('bg'))
+        disponible_cb.pack(side='left', padx=5)
+
+        if is_fixed: var.set(True); disponible_cb.config(state='disabled')
+        else:
+            btn_remove = tk.Button(member_frame, text="X", font=("Helvetica", 8, "bold"), width=2, bg=self.root.COLOR_DANGER, fg='white', relief='flat', command=lambda a=alias: self.remove_member_from_assign_list(a))
+            btn_remove.pack(side='right')
+
+    def remove_member_from_assign_list(self, alias):
+        if alias in self.members_to_assign and not self.members_to_assign[alias]['is_fixed']:
+            del self.members_to_assign[alias]
+            if alias in self.member_display_frames:
+                if self.member_display_frames[alias].winfo_exists(): self.member_display_frames[alias].destroy()
+                del self.member_display_frames[alias]
+            self.update_member_combobox()
 
     def btn_registrar_tarea(self):
-        nombre = self.root.componentes['inpNombreCreateTareaUser'].get()
-        fecha = self.root.componentes['inpFechaProgramadaCreateTareaUser'].get()
-        prioridad_str = self.root.componentes['inpPrioridadCreateTarea'].get()
-        detalle = self.root.componentes['inpDetalleCreateTarea'].get("1.0", tk.END).strip()
-        if not all([nombre, fecha, prioridad_str]):
-            messagebox.showerror(title="Datos Incompletos", message="Nombre, Fecha y Prioridad son obligatorios.")
-            return
+        nombre = self.root.componentes.get('inpNombreCreateTareaUser').get()
+        fecha = self.selected_date.strftime('%d-%m-%Y')
+        prioridad_str = self.root.componentes.get('inpPrioridadCreateTarea').get()
+        detalle = self.root.componentes.get('inpDetalleCreateTarea').get("1.0", tk.END).strip() # From Text widget
+        self.lbl_task_response.config(text="") # Clear previous
+
+        if not all([nombre, fecha, prioridad_str]): # Detalle can be optional based on your rules
+            self.lbl_task_response.config(text='Nombre, Fecha y Prioridad son obligatorios.', fg=self.root.COLOR_DANGER); return
         try:
             prioridad = int(prioridad_str)
             if not (1 <= prioridad <= 5): raise ValueError("Rango")
         except ValueError:
-            messagebox.showerror(title="Dato Inválido", message="Prioridad debe ser un número entre 1 y 5.")
-            return
-        is_registered, response = TaskController.event_register_task_user(
-            nombre=nombre,
-            fecha=fecha,
-            prioridad=prioridad,
-            detalle=detalle
-        )
-        if is_registered:
-            messagebox.showinfo(title="Tarea Registrada", message=response)
-            self.btn_aceptar_crear_tarea()
+            self.lbl_task_response.config(text='Prioridad debe ser un número entre 1 y 5.', fg=self.root.COLOR_DANGER); return
+
+        miembros_a_asignar_final = 'all'
+        if self.selected_group_id:
+            if self.assignment_type_var.get() == "personalizado":
+                if not self.members_to_assign:
+                    self.lbl_task_response.config(text='Debe haber al menos un miembro asignado para tarea personalizada.', fg=self.root.COLOR_DANGER); return
+                miembros_a_asignar_final = [[alias, data['var'].get()] for alias, data in self.members_to_assign.items()]
+            is_registered_task, response_msg = TaskController.event_register_task_group(id_grupo=self.selected_group_id, nombre=nombre, fecha=fecha, prioridad=prioridad, detalle=detalle, miembros_disponible=miembros_a_asignar_final)
         else:
-            messagebox.showerror(title="Error al Registrar Tarea", message=response)
+            is_registered_task, response_msg = TaskController.event_register_task_user(nombre=nombre, fecha=fecha, prioridad=prioridad, detalle=detalle)
 
-    def btn_volver(self): MainView(root=self.root)
-    def btn_aceptar_crear_tarea(self): MainView(root=self.root)
+        self.lbl_task_response.config(text=response_msg, fg=self.root.COLOR_SUCCESS if is_registered_task else self.root.COLOR_DANGER)
+        if is_registered_task:
+            self.root.componentes.get('btnRegistrarTareaCreateTarea').config(state='disabled')
+            # Assuming button exists in components dict (created by create_button)
+            if 'btnAceptarRegistroCreateTarea' in self.root.componentes:
+                 if self.root.componentes['btnAceptarRegistroCreateTarea'].winfo_exists(): self.root.componentes['btnAceptarRegistroCreateTarea'].config(state='normal')
+            else:
+                self.root.create_button(self.lbl_task_response.master, 'btnAceptarRegistroCreateTarea', text='Aceptar', funcion=self.btn_aceptar_crear_tarea, pack_info={'pady':(5,0)})
 
+    def btn_volver(self): MainView(self.root)
+    def btn_aceptar_crear_tarea(self): MainView(self.root)
 
 class ManageGroupsView:
     def __init__(self, root: 'RootView'):
@@ -922,12 +1115,12 @@ class ManageGroupsView:
 
     def next_page(self):
         if self.current_page < self.total_pages:
-            self.current_page += 1;
+            self.current_page += 1
             self.display_current_page()
 
     def prev_page(self):
         if self.current_page > 1:
-            self.current_page -= 1;
+            self.current_page -= 1
             self.display_current_page()
 
     def go_to_main_view(self):
@@ -945,31 +1138,25 @@ class ViewGroupDetailsView:
         self.root = root
         self.group_id = group_id
 
-        # Datos cargados desde el controlador
-        self.group_data = {}
-        self.user_role = None
-        self.members = []
+        # --- Atributos para la nueva funcionalidad ---
+        self.pending_role_changes = {}
+        self.member_widgets = {}  # Guarda los widgets de cada miembro para poder modificarlos
+        self.save_roles_button = None
 
-        # Estado para la sección de tareas
-        self.tasks_widgets_frame = None
-        self.date_display_label = None
+        # Datos cargados
+        self.group_data, self.user_role, self.members = {}, None, []
+
+        # Estado para tareas y su paginación
+        self.tasks_widgets_frame, self.date_display_label = None, None
         self.current_date = datetime.date.today()
         self.all_tasks_for_date = []
-
-        # Estado para la paginación de tareas
-        self.task_pagination_frame = None
-        self.task_prev_button = None
-        self.task_next_button = None
-        self.task_page_label = None
-        self.current_task_page = 1
-        self.tasks_per_page = 5
-        self.total_task_pages = 1
+        self.task_pagination_frame, self.task_prev_button, self.task_next_button, self.task_page_label = None, None, None, None
+        self.current_task_page, self.tasks_per_page, self.total_task_pages = 1, 5, 1
 
         self.create_view_group_interface()
 
     def create_view_group_interface(self):
         self.root.limpiar_componentes()
-
         request = GroupController.get_data_to_view(id_grupo=self.group_id)
         if not request['success']:
             messagebox.showerror("Error al Cargar Grupo", request['response'])
@@ -979,12 +1166,10 @@ class ViewGroupDetailsView:
         self.group_data = request['data'].get('grupo', {})
         self.user_role = request['data'].get('usuario', {}).get('rol')
         self.members = request['data'].get('miembros', [])
-
         self.all_tasks_for_date = sorted(request['data'].get('tareas', []) or [], key=lambda t: t.get('prioridad', 99))
 
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
         main_frame.pack(fill='both', expand=True)
-
         group_header_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         group_header_frame.pack(fill='x', pady=(0, 15))
         tk.Label(group_header_frame, text=self.group_data.get('nombre', 'Grupo'), font=self.root.FONT_TITLE,
@@ -994,11 +1179,9 @@ class ViewGroupDetailsView:
 
         paned_window = ttk.PanedWindow(main_frame, orient='horizontal')
         paned_window.pack(fill='both', expand=True)
-
         tasks_container = tk.Frame(paned_window, bg=self.root.COLOR_BACKGROUND, padx=10)
         self.create_task_view(parent=tasks_container)
         paned_window.add(tasks_container, weight=3)
-
         members_container = tk.Frame(paned_window, bg=self.root.COLOR_BACKGROUND, padx=10)
         self.create_members_view(parent=members_container)
         paned_window.add(members_container, weight=1)
@@ -1006,9 +1189,118 @@ class ViewGroupDetailsView:
         footer_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'), pady=10)
         footer_frame.pack(fill='x')
         self.create_footer_buttons(parent=footer_frame)
-
         self.setup_task_display()
 
+    def create_members_view(self, parent):
+        tk.Label(parent, text="Miembros", font=("Helvetica", 16, "bold"), bg=parent.cget('bg')).pack(anchor='w')
+        canvas_frame = tk.Frame(parent);
+        canvas_frame.pack(fill='both', expand=True)
+        canvas = tk.Canvas(canvas_frame, bg=self.root.COLOR_FRAME, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=self.root.COLOR_FRAME)
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.member_widgets = {}  # Limpiar widgets de miembros
+        for member in self.members:
+            self.insert_member_row(scrollable_frame, member)
+
+        # Botón para guardar cambios de roles, inicialmente oculto
+        self.save_roles_button = tk.Button(parent, text="Guardar Cambios de Roles", command=self.save_role_changes,
+                                           bg=self.root.COLOR_SUCCESS, fg='white')
+        # Se mostrará con .pack() cuando sea necesario
+
+    def insert_member_row(self, parent, member):
+        alias = member['alias']
+        rol = member['rol']
+
+        member_frame = tk.Frame(parent, bg=self.root.COLOR_FRAME, pady=3, padx=5)
+        member_frame.pack(fill='x')
+
+        tk.Label(member_frame, text=f"{alias}", font=("Helvetica", 11, "bold"), bg=member_frame.cget('bg')).pack(
+            side='left')
+
+        # Contenedor para el widget de rol (Label o OptionMenu)
+        role_widget_container = tk.Frame(member_frame, bg=member_frame.cget('bg'))
+        role_widget_container.pack(side='left', padx=4)
+
+        role_label = tk.Label(role_widget_container, text=f"({rol.capitalize()})", font=("Helvetica", 10),
+                              bg=member_frame.cget('bg'))
+        role_label.pack()
+
+        # Botón de edición de rol
+        edit_button = tk.Button(member_frame, text="Editar Rol", font=("Helvetica", 8),
+                                command=lambda a=alias: self.enable_role_editing(a))
+
+        # El master puede editar a todos menos a otros masters y a sí mismo
+        can_edit = self.user_role == 'master' and rol != 'master' and alias != SessionController.get_alias_user()
+        edit_button.config(state='normal' if can_edit else 'disabled')
+        edit_button.pack(side='right')
+
+        # Guardar referencia a los widgets de este miembro
+        self.member_widgets[alias] = {'frame': member_frame, 'role_container': role_widget_container,
+                                      'edit_button': edit_button}
+
+    def enable_role_editing(self, alias: str):
+        widgets = self.member_widgets.get(alias)
+        if not widgets: return
+
+        # Ocultar botón de editar para evitar clics múltiples
+        widgets['edit_button'].pack_forget()
+
+        # Limpiar el contenedor del widget de rol
+        for w in widgets['role_container'].winfo_children():
+            w.destroy()
+
+        # Crear y mostrar el OptionMenu
+        role_options = ["editor", "miembro"]
+        selected_role = tk.StringVar(value=self.pending_role_changes.get(alias, self.get_member_role(alias)))
+
+        # Asociar el cambio en el menú a nuestro manejador de cambios
+        selected_role.trace("w", lambda *args: self.on_role_changed(alias, selected_role))
+
+        option_menu = ttk.OptionMenu(widgets['role_container'], selected_role, selected_role.get(), *role_options)
+        option_menu.pack()
+
+        # Mostrar el botón de guardar si es la primera vez que se edita
+        if not self.save_roles_button.winfo_ismapped():
+            self.save_roles_button.pack(pady=10)
+
+    def on_role_changed(self, alias: str, selected_role_var: tk.StringVar):
+        new_role = selected_role_var.get()
+        # Actualizar el diccionario de cambios pendientes
+        self.pending_role_changes[alias] = new_role
+
+    def save_role_changes(self):
+        if not self.pending_role_changes:
+            messagebox.showinfo("Sin cambios", "No se ha modificado ningún rol.")
+            return
+        roles = {'miembro':Rol.miembro, 'editor': Rol.editor}
+        lista_de_cambios = [[alias, roles.get(rol)] for alias, rol in self.pending_role_changes.items()]
+
+        request = GroupController.set_rol_members(id_grupo=self.group_id, lista_cambios=lista_de_cambios)
+
+        if request['success']:
+            messagebox.showinfo("Éxito", request['response'])
+        else:
+            # Mostrar un error por cada respuesta fallida
+            for error_msg in request['response']:
+                messagebox.showerror("Error al Guardar", error_msg)
+
+        # Recargar la vista para reflejar los cambios y salir del modo de edición
+        self.create_view_group_interface()
+
+    def get_member_role(self, alias: str):
+        """Función auxiliar para obtener el rol actual de un miembro."""
+        for member in self.members:
+            if member['alias'] == alias:
+                return member['rol']
+        return ""
+
+    # --- El resto de métodos permanecen sin cambios ---
     def create_task_view(self, parent):
         tk.Label(parent, text="Tareas del Grupo", font=("Helvetica", 16, "bold"), bg=parent.cget('bg')).pack()
         date_control_frame = tk.Frame(parent, bg=parent.cget('bg'))
@@ -1030,16 +1322,10 @@ class ViewGroupDetailsView:
     def setup_task_display(self):
         self.date_display_label.config(text=self.current_date.strftime('%A, %d de %B').capitalize())
         req = TaskController.get_tasks_of_group_date(fecha=self.current_date, id_grupo=self.group_id)
-        if not req['success']:
-            messagebox.showerror("Error", f"No se pudieron cargar las tareas para esta fecha.\n{req['response']}")
-            self.all_tasks_for_date = []
-        else:
-            self.all_tasks_for_date = sorted(req['data'].get('tareas', []) or [], key=lambda t: t.get('prioridad', 99))
-
+        self.all_tasks_for_date = sorted(req['data'].get('tareas', []) or [], key=lambda t: t.get('prioridad', 99))
         num_tasks = len(self.all_tasks_for_date)
         self.total_task_pages = (num_tasks + self.tasks_per_page - 1) // self.tasks_per_page or 1
         self.current_task_page = 1
-
         self.setup_task_pagination_controls()
         self.display_current_task_page()
 
@@ -1051,8 +1337,7 @@ class ViewGroupDetailsView:
         else:
             start_idx = (self.current_task_page - 1) * self.tasks_per_page
             tasks_to_show = self.all_tasks_for_date[start_idx: start_idx + self.tasks_per_page]
-            for task in tasks_to_show:
-                self.insert_task_card(tarea=task)
+            for task in tasks_to_show: self.insert_task_card(tarea=task)
         self.update_task_pagination_controls()
 
     def insert_task_card(self, tarea: dict):
@@ -1060,26 +1345,20 @@ class ViewGroupDetailsView:
         task_frame = tk.Frame(self.tasks_widgets_frame, bg=self.root.COLOR_FRAME, relief='solid', borderwidth=1,
                               padx=10, pady=10)
         task_frame.pack(fill='x', pady=5, expand=True)
-
         info_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
         info_frame.pack(side='left', fill='x', expand=True)
         tk.Label(info_frame, text=tarea.get('nombre'), font=("Helvetica", 14, "bold"), bg=info_frame.cget('bg'),
                  fg=self.root.COLOR_TEXT_DARK, anchor='w', justify='left', wraplength=400).pack(fill='x')
         tk.Label(info_frame, text=tarea.get('nombre_prioridad', ''), font=("Helvetica", 10, "italic"),
                  bg=info_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK, anchor='w').pack(fill='x', pady=(2, 0))
-
-        # --- INICIO DE LA CORRECCIÓN 1: Mostrar etiqueta "Archivado" en el área de información. ---
-        is_archived = tarea.get('archivado')
-        if is_archived:
-            tk.Label(info_frame, text="Archivado", font=("Helvetica", 9, "italic"), fg='grey', bg=info_frame.cget('bg'),
-                     anchor='w').pack(fill='x', pady=(5, 0))
-
+        is_archived = tarea.get('archivado', False)
+        if is_archived: tk.Label(info_frame, text="Archivado", font=("Helvetica", 9, "italic"), fg='grey',
+                                 bg=info_frame.cget('bg'), anchor='w').pack(fill='x', pady=(5, 0))
         actions_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
         actions_frame.pack(side='right', fill='y', padx=(10, 0))
-
-        realizado = tarea.get('realizado')
-        can_edit = self.user_role in ['master', 'editor']
-        can_archive_permission = self.user_role in ['master', 'editor']
+        realizado = tarea.get('realizado', False)
+        can_edit = self.user_role in ['master', 'editor'] and tarea.get('disponible')
+        can_archive_permission = True
         can_delete = self.user_role == 'master'
 
         btn_check = tk.Button(actions_frame, text='✔' if realizado else '✖',
@@ -1087,42 +1366,34 @@ class ViewGroupDetailsView:
                               fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat', width=3,
                               command=lambda id_t=task_id: self.btn_check_task(id_tarea=id_t), cursor="hand2")
         btn_check.config(state='disabled' if is_archived else 'normal')
-        btn_check.pack(pady=2, fill='x')
 
+        btn_check.pack(pady=2, fill='x')
         btn_details = tk.Button(actions_frame, text='Detalle', bg='#17A2B8', fg=self.root.COLOR_TEXT_LIGHT,
                                 font=self.root.FONT_BUTTON, relief='flat',
                                 command=lambda t=tarea: self.show_task_details(tarea=t), cursor="hand2")
         btn_details.pack(pady=2, fill='x')
 
-        btn_edit = tk.Button(actions_frame, text='Editar', bg='#6C757D', fg=self.root.COLOR_TEXT_LIGHT,
-                             font=self.root.FONT_BUTTON, relief='flat',
-                             command=lambda id_t=task_id: self.btn_edit_task(id_tarea=id_t))
-        btn_edit.config(state='disabled' if is_archived or not can_edit else 'normal',
-                        cursor="hand2" if can_edit and not is_archived else "arrow")
-        btn_edit.pack(pady=2, fill='x')
+        if can_edit:
+            btn_edit = tk.Button(actions_frame, text='Editar', bg='#6C757D', fg=self.root.COLOR_TEXT_LIGHT,
+                                 font=self.root.FONT_BUTTON, relief='flat',
+                                 command=lambda t=tarea: self.btn_edit_task(task_data=t))
+            btn_edit.pack(pady=2, fill='x')
 
-        # --- INICIO DE LA CORRECCIÓN 2: El botón cambia entre Archivar y Desarchivar. ---
         btn_archive_unarchive = tk.Button(actions_frame, font=self.root.FONT_BUTTON, relief='flat',
                                           fg=self.root.COLOR_TEXT_LIGHT)
         if is_archived:
-            btn_archive_unarchive.config(
-                text="Desarchivar",
-                bg=self.root.COLOR_SUCCESS,  # Un color positivo para la acción
-                command=lambda id_t=task_id: self.btn_unarchive_task(id_tarea=id_t),
-                state='normal' if can_archive_permission else 'disabled',
-                cursor="hand2" if can_archive_permission else "arrow"
-            )
+            btn_archive_unarchive.config(text="Desarchivar", bg=self.root.COLOR_SUCCESS,
+                                         command=lambda id_t=task_id: self.btn_unarchive_task(id_tarea=id_t),
+                                         state='normal' if can_archive_permission else 'disabled',
+                                         cursor="hand2" if can_archive_permission else "arrow")
         else:
-            btn_archive_unarchive.config(
-                text="Archivar",
-                bg='#5D6D7E',
-                command=lambda id_t=task_id: self.btn_archive_task(id_tarea=id_t),
-                state='normal' if can_archive_permission else 'disabled',
-                cursor="hand2" if can_archive_permission else "arrow"
-            )
+            btn_archive_unarchive.config(text="Archivar", bg='#5D6D7E',
+                                         command=lambda id_t=task_id: self.btn_archive_task(id_tarea=id_t),
+                                         state='normal' if can_archive_permission else 'disabled',
+                                         cursor="hand2" if can_archive_permission else "arrow")
         btn_archive_unarchive.pack(pady=2, fill='x')
-        # --- FIN DE LA CORRECCIÓN 2 ---
-
+        if not can_edit:
+            return
         btn_delete = tk.Button(actions_frame, text='Eliminar', bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT,
                                font=self.root.FONT_BUTTON, relief='flat',
                                command=lambda id_t=task_id: self.btn_delete_task(id_tarea=id_t))
@@ -1160,47 +1431,26 @@ class ViewGroupDetailsView:
     def prev_task_page(self):
         if self.current_task_page > 1: self.current_task_page -= 1; self.display_current_task_page()
 
-    def create_members_view(self, parent):
-        tk.Label(parent, text="Miembros", font=("Helvetica", 16, "bold"), bg=parent.cget('bg')).pack(anchor='w')
-        canvas_frame = tk.Frame(parent);
-        canvas_frame.pack(fill='both', expand=True)
-        canvas = tk.Canvas(canvas_frame, bg=self.root.COLOR_FRAME, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg=self.root.COLOR_FRAME)
-        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left", fill="both", expand=True);
-        scrollbar.pack(side="right", fill="y")
-        for member in self.members:
-            member_frame = tk.Frame(scrollable_frame, bg=self.root.COLOR_FRAME, pady=3, padx=5)
-            member_frame.pack(fill='x')
-            tk.Label(member_frame, text=f"{member['alias']}", font=("Helvetica", 11, "bold"),
-                     bg=member_frame.cget('bg')).pack(side='left')
-            tk.Label(member_frame, text=f"({member['rol'].capitalize()})", font=("Helvetica", 10),
-                     bg=member_frame.cget('bg')).pack(side='left', padx=4)
-            if self.user_role == 'master' and member['alias'] != SessionController.get_alias_user():
-                tk.Button(member_frame, text="Editar Rol", font=("Helvetica", 8), state='disabled').pack(side='right')
-
     def create_footer_buttons(self, parent):
         pack_info = {'side': 'right', 'padx': 5, 'ipady': 3, 'ipadx': 10}
         self.root.create_button(container=parent, name='btnBackToGroups', funcion=self.go_to_manage_groups,
                                 text='← Volver', bg='#6C757D', pack_info=pack_info)
-        btn_add = self.root.create_button(container=parent, name='btnAddMember',
-                                          funcion=lambda: messagebox.showinfo("WIP",
-                                                                              "Funcionalidad para agregar miembro no implementada."),
-                                          text='Agregar Miembro', bg=self.root.COLOR_SUCCESS, pack_info=pack_info)
-        btn_add.config(state='normal' if self.user_role == 'master' else 'disabled')
-        btn_create_task = self.root.create_button(container=parent, name='btnCreateTaskForGroup',
-                                                  funcion=lambda: messagebox.showinfo("WIP",
-                                                                                      "Funcionalidad para crear tarea de grupo no implementada."),
-                                                  text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY, pack_info=pack_info)
-        btn_create_task.config(state='normal' if self.user_role in ['master', 'editor'] else 'disabled')
-        btn_edit = self.root.create_button(container=parent, name='btnEditGroup',
-                                           funcion=lambda: messagebox.showinfo("WIP",
-                                                                               "Funcionalidad para editar grupo no implementada."),
-                                           text='Editar Grupo', bg='#5D6D7E', pack_info=pack_info)
-        btn_edit.config(state='normal' if self.user_role == 'master' else 'disabled')
+        if self.user_role == 'master':
+            self.root.create_button(container=parent, name='btnAddMember',
+                                              funcion=self.open_add_member_window,
+                                              text='Agregar Miembro', bg=self.root.COLOR_SUCCESS, pack_info=pack_info)
+
+        if self.user_role in ['master', 'editor']:
+            self.root.create_button(container=parent, name='btnCreateTaskForGroup',
+                                                      funcion=self.open_create_task_window,
+                                                      text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY,
+                                                      pack_info=pack_info)
+        if self.user_role == 'master':
+            btn_edit = self.root.create_button(container=parent, name='btnEditGroup',
+                                               funcion=lambda: messagebox.showinfo("WIP",
+                                                                                   "Funcionalidad para editar grupo no implementada."),
+                                               text='Editar Grupo', bg='#5D6D7E', pack_info=pack_info)
+            btn_edit.config(state='normal' if self.user_role == 'master' else 'disabled')
 
     def go_to_manage_groups(self):
         ManageGroupsView(root=self.root)
@@ -1221,40 +1471,372 @@ class ViewGroupDetailsView:
         return next((task for task in self.all_tasks_for_date if task.get('id_tarea') == task_id), None)
 
     def show_task_details(self, tarea: dict):
-        nombre = tarea.get('nombre', 'Detalles')
-        detalle = tarea.get('detalle') or "No hay detalles para esta tarea."
-        messagebox.showinfo(title=nombre, message=detalle)
+        messagebox.showinfo(title=tarea.get('nombre', 'Detalles'),
+                            message=tarea.get('detalle') or "No hay detalles para esta tarea.")
 
     def btn_check_task(self, id_tarea):
         task = self.find_task_by_id_in_date(id_tarea)
         if not task: return
-        nuevo_estado = not task.get('realizado', False)
-        is_change, response = TaskController.event_check_in_task(id_tarea=id_tarea, realizado=nuevo_estado)
+        is_change, response = TaskController.event_check_in_task(id_tarea=id_tarea,
+                                                                 realizado=not task.get('realizado', False))
         if is_change:
             self.setup_task_display()
         else:
             messagebox.showerror(title="Error", message=response)
 
-    def btn_edit_task(self, id_tarea):
-        task = self.find_task_by_id_in_date(id_tarea)
-        if task: messagebox.showinfo("WIP", f"Aquí se abriría la ventana para editar la tarea '{task.get('nombre')}'.")
+    def btn_edit_task(self, task_data):
+        EditTaskView(root=self.root, main_view=self, task_data=task_data)
+
+    def refresh_view(self):
+        """Recarga toda la vista para reflejar cambios (como nuevos miembros)."""
+        print("Refrescando la vista de gestión de grupo...")
+        self.create_view_group_interface()
 
     def btn_archive_task(self, id_tarea):
-        task = self.find_task_by_id_in_date(id_tarea)
-        if task and messagebox.askyesno("Confirmar", f"¿Archivar la tarea '{task.get('nombre')}'?"):
-            messagebox.showinfo("WIP", "Funcionalidad de archivar no conectada al controlador.")
-            self.setup_task_display()
+        if messagebox.askyesno("Confirmar", f"¿Archivar esta tarea?"): messagebox.showinfo("WIP",
+                                                                                           "Funcionalidad de archivar no conectada."); self.setup_task_display()
 
     def btn_unarchive_task(self, id_tarea):
-        task = self.find_task_by_id_in_date(id_tarea)
-        if task and messagebox.askyesno("Confirmar", f"¿Desarchivar la tarea '{task.get('nombre')}'?"):
-            messagebox.showinfo("WIP", "Funcionalidad de desarchivar no conectada al controlador.")
-            self.setup_task_display()
+        if messagebox.askyesno("Confirmar", f"¿Desarchivar esta tarea?"): messagebox.showinfo("WIP",
+                                                                                              "Funcionalidad de desarchivar no conectada."); self.setup_task_display()
 
     def btn_delete_task(self, id_tarea):
-        task = self.find_task_by_id_in_date(id_tarea)
-        if task and messagebox.askyesno("¡PELIGRO!",
-                                        f"¿ELIMINAR la tarea '{task.get('nombre')}'? Esta acción no se puede deshacer.",
-                                        icon='warning'):
-            messagebox.showinfo("WIP", "Funcionalidad de eliminar no conectada al controlador.")
-            self.setup_task_display()
+        if messagebox.askyesno("¡PELIGRO!", f"¿ELIMINAR esta tarea? Esta acción no se puede deshacer.",
+                               icon='warning'): messagebox.showinfo("WIP",
+                                                                    "Funcionalidad de eliminar no conectada."); self.setup_task_display()
+
+    def open_create_task_window(self):
+        """Abre la ventana emergente para crear una tarea para este grupo específico."""
+        RegisterTaskForGroupView(
+            parent_root_view=self.root,
+            parent_view=self,
+            group_id=self.group_id,
+            group_name=self.group_data.get('nombre', 'Grupo'),
+            group_members=self.members
+        )
+
+    def open_add_member_window(self):
+        """Abre la ventana emergente para agregar nuevos miembros."""
+        AddMembersView(
+            parent_root_view=self.root,
+            parent_view=self,
+            group_id=self.group_id,
+            current_members=self.members
+        )
+
+class AddMembersView(Toplevel):
+    def __init__(self, parent_root_view: 'RootView', parent_view: 'ViewGroupDetailsView', group_id: int,
+                 current_members: list):
+        super().__init__(parent_root_view.root)
+        self.root_view = parent_root_view
+        self.parent_view = parent_view
+        self.group_id = group_id
+        self.current_members_aliases = [m['alias'] for m in current_members]
+
+        self.members_to_add = []
+
+        self.title("Agregar Miembros")
+        self.config(bg=self.root_view.COLOR_BACKGROUND, padx=20, pady=20)
+        self.transient(self.root_view.root)
+        self.grab_set()
+
+        self.create_widgets()
+        self.root_view.center_window(top_level_window=self)
+
+    def create_widgets(self):
+        tk.Label(self, text="Agregar Nuevos Miembros", font=self.root_view.FONT_TITLE, bg=self.cget('bg')).pack(
+            pady=(0, 20))
+
+        input_frame = tk.Frame(self, bg=self.cget('bg'))
+        input_frame.pack(fill='x')
+
+        self.alias_entry = tk.Entry(input_frame, font=self.root_view.FONT_BODY)
+        self.alias_entry.pack(side='left', fill='x', expand=True, ipady=4, padx=(0, 10))
+
+        tk.Button(input_frame, text="Añadir a la lista", command=self.add_member_to_list,
+                  bg=self.root_view.COLOR_PRIMARY, fg='white').pack(side='left')
+
+        tk.Label(self, text="Miembros para agregar:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).pack(
+            anchor='w', pady=(15, 5))
+
+        self.members_frame = tk.Frame(self, bg=self.root_view.COLOR_FRAME, relief='sunken', borderwidth=1)
+        self.members_frame.pack(fill='both', expand=True, ipady=10)
+
+        self.update_members_display()
+
+        footer_frame = tk.Frame(self, bg=self.cget('bg'))
+        footer_frame.pack(fill='x', pady=(20, 0))
+
+        tk.Button(footer_frame, text="Guardar Miembros", command=self.save_new_members, bg=self.root_view.COLOR_SUCCESS,
+                  fg='white').pack(side='left', expand=True, padx=5)
+        tk.Button(footer_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').pack(side='right',
+                                                                                                      expand=True,
+                                                                                                      padx=5)
+
+    def add_member_to_list(self):
+        alias = self.alias_entry.get().strip()
+        if not alias: return
+
+        if alias in self.members_to_add:
+            messagebox.showwarning("Duplicado", f"El usuario '{alias}' ya está en la lista para agregar.", parent=self)
+            return
+
+        if alias in self.current_members_aliases:
+            messagebox.showerror("Error", f"El usuario '{alias}' ya es miembro de este grupo.", parent=self)
+            return
+
+        is_valid, response = GroupController.is_user_exits(alias_usuario=alias)
+        if not is_valid:
+            messagebox.showerror("Usuario no válido", response, parent=self)
+            return
+
+        self.members_to_add.append(alias)
+        self.update_members_display()
+        self.alias_entry.delete(0, 'end')
+
+    def update_members_display(self):
+        for widget in self.members_frame.winfo_children():
+            widget.destroy()
+
+        if not self.members_to_add:
+            tk.Label(self.members_frame, text="Aún no hay miembros en la lista.", bg=self.members_frame.cget('bg'),
+                     fg='grey').pack(pady=10)
+            return
+
+        for alias in self.members_to_add:
+            row_frame = tk.Frame(self.members_frame, bg=self.members_frame.cget('bg'))
+            row_frame.pack(fill='x', padx=10, pady=2)
+            tk.Label(row_frame, text=f"• {alias}", bg=row_frame.cget('bg')).pack(side='left')
+            tk.Button(row_frame, text="Quitar", command=lambda a=alias: self.remove_member_from_list(a),
+                      bg=self.root_view.COLOR_DANGER, fg='white', font=("Helvetica", 8)).pack(side='right')
+
+    def remove_member_from_list(self, alias: str):
+        self.members_to_add.remove(alias)
+        self.update_members_display()
+
+    def save_new_members(self):
+        if not self.members_to_add:
+            messagebox.showinfo("Información", "La lista de nuevos miembros está vacía.", parent=self)
+            return
+
+        success, response = GroupController.add_members_to_group(id_grupo=self.group_id, miembros=self.members_to_add)
+
+        if success:
+            messagebox.showinfo("Éxito", response, parent=self)
+            self.parent_view.refresh_view()  # Refrescar la vista anterior
+            self.destroy()
+        else:
+            messagebox.showerror("Error", response, parent=self)
+
+
+class RegisterTaskForGroupView(Toplevel):
+    """
+    Ventana emergente para registrar una nueva tarea para un grupo específico.
+    Incluye lógica completa para la asignación de miembros.
+    """
+
+    def __init__(self, parent_root_view: 'RootView', parent_view: 'ViewGroupDetailsView', group_id: int,
+                 group_name: str, group_members: list):
+        super().__init__(parent_root_view.root)
+        self.root = parent_root_view
+        self.parent_view = parent_view
+        self.group_id = group_id
+        self.group_name = group_name
+        # Estado
+        self.selected_date = datetime.date.today()
+        self.current_user_alias = SessionController.get_alias_user()
+        self.all_group_members_data = {m['alias']: m['rol'] for m in group_members}
+        self.members_to_assign = {}
+
+        # Widgets
+        self.date_display_label = None
+        self.assignment_frame = None
+        self.members_selection_frame = None
+        self.member_combobox = None
+        self.selected_members_display_frame = None
+
+        self.title(f"Nueva Tarea para: {self.group_name}")
+        self.config(bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
+        self.transient(self.root.root)
+        self.grab_set()
+        self.minsize(width=1000, height=650)
+        self.create_formulate_tarea()
+        self.root.center_window(top_level_window=self)
+
+    def create_formulate_tarea(self):
+        canvas = tk.Canvas(self, bg=self.cget('bg'), highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        form_content_frame = tk.Frame(canvas, bg=self.cget('bg'))
+        form_content_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=form_content_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        tk.Label(form_content_frame, text=f"Nueva Tarea para '{self.group_name}'", font=self.root.FONT_TITLE,
+                 bg=self.cget('bg')).grid(row=0, column=0, columnspan=2, pady=(0, 15))
+        form_content_frame.grid_columnconfigure(1, weight=1)
+
+        labels_texts = ['Nombre de la Tarea:', 'Fecha:', 'Prioridad (1-5):', 'Detalle:']
+        self.inputs = {}
+        for i, text in enumerate(labels_texts):
+            tk.Label(form_content_frame, text=text, font=self.root.FONT_LABEL, bg=self.cget('bg')).grid(row=i + 1,
+                                                                                                        column=0,
+                                                                                                        sticky='nw',
+                                                                                                        pady=5, padx=5)
+            key = text.split(' ')[0].lower().replace(':', '')
+            if key == 'detalle':
+                inp = Text(form_content_frame, font=self.root.FONT_BODY, height=6, wrap=tk.WORD, relief='solid',
+                           borderwidth=1)
+                inp.grid(row=i + 1, column=1, sticky='ew', pady=5, padx=5)
+            elif key == 'fecha':
+                date_frame = tk.Frame(form_content_frame, bg=self.cget('bg'))
+                date_frame.grid(row=i + 1, column=1, sticky='ew', pady=5, padx=5)
+                self.date_display_label = tk.Label(date_frame, text=self.selected_date.strftime('%d-%m-%Y'),
+                                                   font=self.root.FONT_BODY, relief='solid', borderwidth=1, anchor='w')
+                self.date_display_label.pack(side='left', fill='x', expand=True, ipady=4, padx=(0, 5))
+                tk.Button(date_frame, text="📅", command=self.open_calendar, relief='flat').pack(side='left')
+                inp = self.date_display_label
+            else:
+                inp = tk.Entry(form_content_frame, font=self.root.FONT_BODY, relief='solid', borderwidth=1)
+                inp.grid(row=i + 1, column=1, sticky='ew', pady=5, padx=5, ipady=4)
+            self.inputs[key] = inp
+
+        row_idx = len(labels_texts) + 1
+
+        self.assignment_frame = tk.Frame(form_content_frame, bg=self.cget('bg'))
+        self.assignment_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10, 0));
+        row_idx += 1
+        self.assignment_type_var = tk.StringVar(value="todos")
+        tk.Radiobutton(self.assignment_frame, text="Asignar a todos", variable=self.assignment_type_var, value="todos",
+                       bg=self.cget('bg'), command=self.on_assignment_type_changed).pack(side='left')
+        tk.Radiobutton(self.assignment_frame, text="Personalizado", variable=self.assignment_type_var,
+                       value="personalizado", bg=self.cget('bg'), command=self.on_assignment_type_changed).pack(
+            side='left')
+
+        self.members_selection_frame = tk.Frame(form_content_frame, bg=self.cget('bg'))
+        self.members_selection_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=5);
+        row_idx += 1
+
+        tk.Label(self.members_selection_frame, text="Miembros Asignados:", font=self.root.FONT_LABEL,
+                 bg=self.cget('bg')).pack(anchor='w')
+        self.selected_members_display_frame = tk.Frame(self.members_selection_frame, bg=self.root.COLOR_FRAME,
+                                                       relief='sunken', borderwidth=1)
+        self.selected_members_display_frame.pack(fill='both', expand=True, pady=(5, 10), ipady=5)
+
+        self.member_combobox = ttk.Combobox(self.members_selection_frame, state='readonly')
+        self.member_combobox.pack(fill='x', pady=5)
+        self.member_combobox.bind("<<ComboboxSelected>>", self.add_selected_member)
+        self.members_selection_frame.grid_remove()
+
+        action_buttons_frame = tk.Frame(form_content_frame, bg=self.cget('bg'))
+        action_buttons_frame.grid(row=row_idx, column=0, columnspan=2, pady=(20, 0), sticky='ew')
+        tk.Button(action_buttons_frame, text='Guardar Tarea', command=self.btn_registrar_tarea,
+                  bg=self.root.COLOR_SUCCESS, fg='white').pack(side='left', expand=True, padx=5, ipady=3)
+        tk.Button(action_buttons_frame, text='Cancelar', command=self.destroy, bg='#6C757D', fg='white').pack(
+            side='right', expand=True, padx=5, ipady=3)
+
+        self.on_assignment_type_changed()
+
+    def open_calendar(self):
+        CalendarPicker(parent=self, on_date_select_callback=self.on_date_selected)
+
+    def on_date_selected(self, new_date: datetime.date):
+        self.selected_date = new_date
+        self.date_display_label.config(text=self.selected_date.strftime('%d-%m-%Y'))
+
+    def on_assignment_type_changed(self):
+        self.members_to_assign.clear()
+        if self.assignment_type_var.get() == 'personalizado':
+            self.members_selection_frame.grid()
+            master_alias = next((alias for alias, rol in self.all_group_members_data.items() if rol == 'master'), None)
+            if master_alias:
+                self.add_member_to_assignment_list(alias=master_alias, is_fixed=True)
+            if self.current_user_alias in self.all_group_members_data and self.current_user_alias != master_alias:
+                self.add_member_to_assignment_list(alias=self.current_user_alias, is_fixed=True)
+            self.update_members_display()
+        else:
+            self.members_selection_frame.grid_remove()
+
+    def add_member_to_assignment_list(self, alias: str, is_fixed: bool):
+        if alias not in self.members_to_assign:
+            self.members_to_assign[alias] = {'var': tk.BooleanVar(value=True), 'is_fixed': is_fixed}
+
+    def update_members_display(self):
+        for w in self.selected_members_display_frame.winfo_children(): w.destroy()
+
+        if not self.members_to_assign:
+            tk.Label(self.selected_members_display_frame, text="Nadie asignado.",
+                     bg=self.selected_members_display_frame.cget('bg')).pack()
+
+        for alias, data in self.members_to_assign.items():
+            row = tk.Frame(self.selected_members_display_frame, bg=self.selected_members_display_frame.cget('bg'))
+            row.pack(anchor='w', fill='x')
+
+            cb = tk.Checkbutton(row, text=alias, variable=data['var'], bg=row.cget('bg'))
+            cb.pack(side='left')
+
+            # --- INICIO DE LA CORRECCIÓN 1: Deshabilitar checkbox si el miembro es fijo ---
+            if data.get('is_fixed', False):
+                cb.config(state='disabled')
+            else:
+                # --- INICIO DE LA CORRECCIÓN 2: Añadir botón "Quitar" solo si el miembro NO es fijo ---
+                tk.Button(row, text="Quitar", command=lambda a=alias: self.remove_member_from_list(a),
+                          bg=self.root.COLOR_DANGER, fg='white', font=("Helvetica", 8), relief='flat').pack(side='left',
+                                                                                                            padx=10)
+
+        self.update_member_combobox()
+
+    def remove_member_from_list(self, alias: str):
+        if alias in self.members_to_assign:
+            del self.members_to_assign[alias]
+            self.update_members_display()
+
+    def update_member_combobox(self):
+        available = [f"{alias} ({rol})" for alias, rol in self.all_group_members_data.items() if
+                     alias not in self.members_to_assign]
+        self.member_combobox['values'] = available
+        self.member_combobox.set('Añadir miembro...' if available else 'No hay más miembros')
+
+    def add_selected_member(self, event=None):
+        selection = self.member_combobox.get()
+        if '...' in selection or not selection: return
+        alias = selection.split(' (')[0]
+        if alias not in self.members_to_assign:
+            self.add_member_to_assignment_list(alias=alias, is_fixed=False)
+            self.update_members_display()
+
+    def btn_registrar_tarea(self):
+        nombre = self.inputs['nombre'].get()
+        prioridad_str = self.inputs['prioridad'].get()
+        detalle = self.inputs['detalle'].get("1.0", "end-1c")
+
+        is_valid, msg = TaskController.validar_datos(fecha=self.selected_date, prioridad=prioridad_str)
+        if not nombre or not is_valid:
+            messagebox.showerror("Datos Inválidos",
+                                 f"Por favor, corrige los errores:\n- El nombre es obligatorio.\n- {msg}", parent=self)
+            return
+
+        fecha_str = self.selected_date.strftime('%d-%m-%Y')
+        prioridad = int(prioridad_str)
+
+        miembros_disponible = 'all'
+        if self.assignment_type_var.get() == 'personalizado':
+            miembros_disponible = [[alias, data['var'].get()] for alias, data in self.members_to_assign.items()]
+            if not miembros_disponible:
+                messagebox.showerror("Datos incompletos",
+                                     "Debe seleccionar al menos un miembro para la asignación personalizada.",
+                                     parent=self)
+                return
+
+        is_registered, response = TaskController.event_register_task_group(
+            id_grupo=self.group_id, nombre=nombre, fecha=fecha_str,
+            prioridad=prioridad, detalle=detalle, miembros_disponible=miembros_disponible
+        )
+
+        if is_registered:
+            messagebox.showinfo("Éxito", response, parent=self)
+            self.parent_view.refresh_view()
+            self.destroy()
+        else:
+            messagebox.showerror("Error", response, parent=self)

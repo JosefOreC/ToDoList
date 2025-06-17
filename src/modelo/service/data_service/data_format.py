@@ -6,13 +6,11 @@ datos relacionados con tareas, como fechas y estructuras de salida compatibles
 con interfaces de usuario o APIs. Incluye integración con servicios de grupos
 y manejo de sesiones.
 """
-from http.client import responses
 
-from sqlalchemy.testing import fails_on_everything_except
 from src.modelo.entities.tarea import Tarea
 from src.modelo.entities.grupo import Grupo
 from datetime import datetime, date
-from src.modelo.service.group_service.group_service_data import GroupServiceData as gsd
+from src.modelo.service.group_service.group_service_data import GroupServiceData
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.entities.rol import Rol
 
@@ -103,8 +101,8 @@ class DataFormat:
             if not tarea.Activo:
                 continue
             if id_grupo:
-                grupo = gsd.get_data_task_group_name(id_grupo)
-                rol = gsd.get_rol_in_group(SessionManager.get_id_user(), id_grupo).name
+                grupo = GroupServiceData.get_data_task_group_name(id_grupo)
+                rol = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo).name
             else:
                 grupo = None
                 rol = None
@@ -147,7 +145,7 @@ class DataFormat:
         return response
 
     @staticmethod
-    def convert_to_dict_member_data_group(miembros: tuple)-> list[dict['alias', 'rol']]:
+    def convert_to_dict_member_data_group(miembros: tuple or list)-> list[dict['alias', 'rol']]:
         response = []
         for alias, rol in miembros:
             data = {
