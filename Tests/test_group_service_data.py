@@ -54,12 +54,12 @@ class TestGroupServiceData(unittest.TestCase):
     @patch('src.modelo.service.group_service.group_service_data.session')
     def test_get_all_members_with_rol(self, mock_session):
         mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = [
-            ('Usuario1', Rol.miembro),
-            ('Usuario2', Rol.editor)
+            ('Usuario1', Rol.miembro.name),
+            ('Usuario2', Rol.editor.name)
         ]
 
         result = GroupServiceData.get_all_members_with_rol(1)
-        self.assertEqual(result, [['Usuario1', Rol.miembro], ['Usuario2', Rol.editor]])
+        self.assertEqual(result, [['Usuario1', Rol.miembro.name], ['Usuario2', Rol.editor.name]])
 
     @patch('src.modelo.service.group_service.group_service_data.session')
     def test_change_rol_of_member(self, mock_session):
