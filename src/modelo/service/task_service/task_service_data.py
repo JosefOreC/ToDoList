@@ -121,7 +121,7 @@ class TaskServiceData:
     
     @staticmethod
     def get_task(id_tarea):
-        return session.query(Tarea).filter_by(IDTarea=id_tarea).first().all()
+        return session.query(Tarea).filter_by(IDTarea=id_tarea).first()
             
     @staticmethod
     def soft_delete_task(id_tarea):
