@@ -156,7 +156,7 @@ class TaskController:
         Returns:
             tuple: (bool, str) Resultado y mensaje.
         """
-        if not(nombre or fecha or prioridad or detalle) and disponible is None and realizado is None:
+        if not (nombre or fecha or prioridad or detalle) and disponible is None and realizado is None:
             return False, 'No hubo cambios.'
 
         if fecha:
@@ -213,10 +213,11 @@ class TaskController:
         Returns:
             tuple: (bool, str)
        """
+
         if not nombre or not fecha or not prioridad:
             return False, "No se puede dejar vació ningún campo."
 
-        if (id_grupo:=TaskServiceData.get_id_group_of_task(id_tarea)) is not None:
+        if (id_grupo := TaskServiceData.get_id_group_of_task(id_tarea)) is not None:
             rol = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
             if rol == Rol.miembro:
                 return False, "No se tienen los permisos para editar la tarea"
@@ -250,6 +251,10 @@ class TaskController:
         Returns:
             tuple: (bool, str)
         """
+        if (GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user(), id_grupo=id_grupo).name
+                not in ['master', 'editor']):
+            return False, "No se tienen los permisos para realizar estos cambios."
+
         is_tarea_create, response = TaskController.__create_tarea(nombre,fecha,prioridad,detalle)
         if miembros_disponible != 'all':
             miembros_id_disponible = [[UserServiceData.recover_id_user_for_alias(miembro), disponible]
@@ -318,7 +323,7 @@ class TaskController:
         return {
             'success': success,
             'response': response,
-            'data':{
+            'data': {
                 'tareas': DataFormat.convert_to_dict_task_data_groups(resultados) if resultados else None
             }
         }

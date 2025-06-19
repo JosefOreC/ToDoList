@@ -681,7 +681,7 @@ class GroupRegisterView:
         action_buttons = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         action_buttons.pack(fill='x', pady=(20, 0))
         self.root.create_button(container=action_buttons, name='btnRegisterGroup', funcion=self.btn_register_group, text='Guardar Grupo', bg=self.root.COLOR_SUCCESS, pack_info={'side': 'left', 'expand': True, 'padx': 5, 'ipady':3})
-        self.root.create_button(container=action_buttons, name='btnBackToMain', funcion=self.go_to_main, text='Volver', bg='#6C757D', pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady':3})
+        self.root.create_button(container=action_buttons, name='btnBackToMain', funcion=self.go_to_last_vista, text='Volver', bg='#6C757D', pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady':3})
 
     def btn_add_member(self):
         alias = self.root.componentes.get('inpMemberAlias').get().strip()
@@ -719,11 +719,11 @@ class GroupRegisterView:
         is_registered, response = GroupController.register_group(nombre=nombre, descripcion=descripcion, miembros_alias=self.miembros_alias)
         if is_registered:
             messagebox.showinfo(title="Grupo Registrado", message=response)
-            self.go_to_main()
+            self.go_to_last_vista()
         else:
             messagebox.showerror(title="Error de Registro de Grupo", message=response)
 
-    def go_to_main(self): MainView(root=self.root)
+    def go_to_last_vista(self): ManageGroupsView(root=self.root)
 
 class ProfileView:
     def __init__(self, root: RootView):
@@ -1227,7 +1227,7 @@ class ViewGroupDetailsView:
         role_widget_container = tk.Frame(member_frame, bg=member_frame.cget('bg'))
         role_widget_container.pack(side='left', padx=4)
 
-        role_label = tk.Label(role_widget_container, text=f"({rol.capitalize()})", font=("Helvetica", 10),
+        role_label = tk.Label(role_widget_container, text=f"({rol.name})", font=("Helvetica", 10),
                               bg=member_frame.cget('bg'))
         role_label.pack()
 
@@ -1257,7 +1257,7 @@ class ViewGroupDetailsView:
 
         # Crear y mostrar el OptionMenu
         role_options = ["editor", "miembro"]
-        selected_role = tk.StringVar(value=self.pending_role_changes.get(alias, self.get_member_role(alias)))
+        selected_role = tk.StringVar(value=self.pending_role_changes.get(alias, self.get_member_role(alias).name))
 
         # Asociar el cambio en el menú a nuestro manejador de cambios
         selected_role.trace("w", lambda *args: self.on_role_changed(alias, selected_role))

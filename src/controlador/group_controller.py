@@ -163,6 +163,9 @@ class GroupController:
         Returns:
             tuple: (bool, str) indicando si se agregó correctamente o no, y un mensaje.
         """
+        if GroupController.get_rol_in_group(SessionManager.get_id_user()) != 'master':
+            return False, "No se tienen los permisos para realizar estos cambios."
+
         try:
             if isinstance(miembros, list):
                 miembros_id = [GroupController.recover_id_user(miembro)for miembro in miembros
@@ -250,6 +253,10 @@ class GroupController:
 
     @staticmethod
     def set_rol_member(alias_member: str, id_grupo: int, rol: Rol):
+
+        if GroupController.get_rol_in_group(SessionManager.get_id_user()) != 'master':
+            return False, "No se tienen los permisos para realizar estos cambios."
+
         try:
             id_member = UserServiceData.recover_id_user_for_alias(alias_member)
         except Exception as E:
@@ -273,6 +280,8 @@ class GroupController:
 
     @staticmethod
     def set_rol_members(id_grupo: int, lista_cambios: list[list[str, Rol]]):
+        if GroupController.get_rol_in_group(SessionManager.get_id_user()) != 'master':
+            return False, "No se tienen los permisos para realizar estos cambios."
         bad_responses = []
         for alias, rol in lista_cambios:
             request = GroupController.set_rol_member(alias_member=alias, id_grupo=id_grupo, rol=rol)
