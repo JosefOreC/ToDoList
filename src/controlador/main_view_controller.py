@@ -49,3 +49,11 @@ class MainViewController:
 
         return response
 
+    @staticmethod
+    def recover_task_archivade():
+        response = TaskController.recover_task_archivate()
+        if response['data']['tareas']:
+            response['data']['tareas'] = DataFormat.convert_to_dict_task_data(response['data']['tareas'])
+
+        return response
+

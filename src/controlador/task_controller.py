@@ -43,6 +43,25 @@ class TaskController:
         }
 
     @staticmethod
+    def recover_task_archivate():
+        try:
+            resultados = TaskServiceData.get_task_user_archivade(SessionManager.get_id_user())
+            response = "Se recuperaron los datos."
+            success = True
+        except Exception as E:
+            response = f"No se recuperaron los datos. \n{E}"
+            success = False
+            resultados = None
+
+        return {
+            'success': success,
+            'response': response,
+            'data': {
+                'tareas': resultados
+            }
+        }
+
+    @staticmethod
     def recover_task_date(fecha: datetime) -> dict['success': bool, 'response':str, 'data':dict['tareas':list]]:
         try:
             resultados = TaskServiceData.get_tasks_user_list_date(SessionManager.get_id_user(), fecha_inicio=fecha)
