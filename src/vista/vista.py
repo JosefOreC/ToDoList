@@ -289,6 +289,7 @@ class CalendarPicker(Toplevel):
 
 
 class MainView:
+
     def __init__(self, root: 'RootView'):
         self.root = root
         # Atributos de estado
@@ -297,6 +298,9 @@ class MainView:
         self.current_page = 1
         self.tasks_per_page = 5
         self.total_pages = 1
+        self.recuperar = 'normal'
+        self.funcion_recover_task = {'normal': MainViewController.recover_task_for_date, 'archivadas':
+            MainViewController.recover_task_archivade}
 
         # Widgets que necesitan ser referenciados
         self.title_label = None
@@ -362,7 +366,10 @@ class MainView:
         """Función central que carga datos para la fecha actual y refresca toda la UI."""
         self.update_date_labels()
 
-        request = MainViewController.recover_task_for_date(fecha=self.current_date)
+        if self.recuperar == 'normal':
+            request = self.funcion_recover_task.get(self.recuperar)(fecha=self.current_date)
+        else:
+            request = self.funcion_recover_task.get(self.recuperar)
 
         if not request['success']:
             messagebox.showerror(title="Error al Cargar Tareas", message=request['response'])
@@ -910,12 +917,14 @@ class RegisterTareaUserView:
             self.members_selection_frame.grid()
 
             # 1. Add Master by default (if they exist and are part of the group members list)
-            if self.master_alias_of_selected_group and self.master_alias_of_selected_group in self.all_group_members_data:
+            if (self.master_alias_of_selected_group and
+                    self.master_alias_of_selected_group in self.all_group_members_data):
                 self.add_member_to_assign_list(self.master_alias_of_selected_group, True, is_fixed=True)
 
             # 2. Add Current User (Task Creator) if they are part of the group and not already added as master
             # The fact that they could select this group implies they are master or editor.
-            # So, we just need to check if they are in the group's member list and not the master (if master was already added).
+            # So, we just need to check if they are in the group's member list and not the master
+            # (if master was already added).
             if self.current_user_alias in self.all_group_members_data and \
                     self.current_user_alias != self.master_alias_of_selected_group:
                 self.add_member_to_assign_list(self.current_user_alias, True, is_fixed=True)
