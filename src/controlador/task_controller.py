@@ -127,7 +127,8 @@ class TaskController:
         except TypeError as E:
             return False, E
 
-        return True, Tarea(Nombre=nombre, Fecha_programada=fecha, Prioridad=prioridad, Detalle = detalle)
+        return True, Tarea(Nombre=nombre, Fecha_programada=fecha, Prioridad=prioridad, Detalle = detalle,
+                           type_check=tipo_check)
 
     @staticmethod
     def validar_datos(fecha: str=None, prioridad: int=None):

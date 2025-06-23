@@ -831,6 +831,8 @@ class RegisterTareaUserView:
         self.member_display_frames = {}
         self.selected_date = datetime.date.today()
         self.date_display_label = None
+        self.group_check_var = tk.BooleanVar(value=False)
+        self.check_type_frame = None
 
         self.create_fomulate_tarea()
 
@@ -892,6 +894,20 @@ class RegisterTareaUserView:
         group_combobox.grid(row=row_idx, column=1, sticky='ew', pady=5, padx=5, ipady=2); row_idx += 1
         group_combobox.bind("<<ComboboxSelected>>", self.on_group_selected); self.root.componentes['cmbGroupSelection'] = group_combobox
 
+        #
+        self.check_type_frame = tk.Frame(form_content_frame, bg=form_content_frame.cget('bg'))
+        self.check_type_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10, 0));
+        row_idx += 1
+        tk.Label(self.check_type_frame, text='Tipo de Check:', font=self.root.FONT_LABEL,
+                 bg=self.check_type_frame.cget('bg')).pack(side='left', padx=5)
+        tk.Radiobutton(self.check_type_frame, text="Individual", variable=self.group_check_var, value=False,
+                       font=self.root.FONT_BODY, bg=self.check_type_frame.cget('bg'),
+                       activebackground=self.check_type_frame.cget('bg')).pack(side='left', padx=5)
+        tk.Radiobutton(self.check_type_frame, text="Grupal (un check para todos)", variable=self.group_check_var,
+                       value=True, font=self.root.FONT_BODY, bg=self.check_type_frame.cget('bg'),
+                       activebackground=self.check_type_frame.cget('bg')).pack(side='left', padx=5)
+        self.check_type_frame.grid_remove()
+
         # Assignment Type (Todos / Personalizado)
         self.assignment_frame = tk.Frame(form_content_frame, bg=form_content_frame.cget('bg'))
         self.assignment_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10,0)); row_idx += 1
@@ -941,11 +957,15 @@ class RegisterTareaUserView:
         self.clear_members_display_and_assignment()
 
         if self.selected_group_id:
+            # Mostrar opciones de grupo
+            self.check_type_frame.grid() # Muestra la opción de tipo de check
             self.assignment_frame.grid()
-            self.master_alias_of_selected_group = GroupController.get_group_master_alias(self.selected_group_id) # Uses actual controller
+            self.master_alias_of_selected_group = GroupController.get_group_master_alias(self.selected_group_id)
             self.load_group_members_data()
-            self.on_assignment_type_changed() # This will set defaults for "Personalizado"
+            self.on_assignment_type_changed()
         else:
+            # Ocultar opciones de grupo
+            self.check_type_frame.grid_remove() # Oculta la opción de tipo de check
             self.assignment_frame.grid_remove()
             self.members_selection_frame.grid_remove()
 
@@ -1042,12 +1062,14 @@ class RegisterTareaUserView:
         self.lbl_task_response.config(text="") # Clear previous
 
         if not all([nombre, fecha, prioridad_str]): # Detalle can be optional based on your rules
-            self.lbl_task_response.config(text='Nombre, Fecha y Prioridad son obligatorios.', fg=self.root.COLOR_DANGER); return
+            self.lbl_task_response.config(text='Nombre, Fecha y Prioridad son obligatorios.', fg=self.root.COLOR_DANGER)
+            return
         try:
             prioridad = int(prioridad_str)
             if not (1 <= prioridad <= 5): raise ValueError("Rango")
         except ValueError:
-            self.lbl_task_response.config(text='Prioridad debe ser un número entre 1 y 5.', fg=self.root.COLOR_DANGER); return
+            self.lbl_task_response.config(text='Prioridad debe ser un número entre 1 y 5.', fg=self.root.COLOR_DANGER)
+            return
 
         miembros_a_asignar_final = 'all'
         if self.selected_group_id:
@@ -1055,7 +1077,16 @@ class RegisterTareaUserView:
                 if not self.members_to_assign:
                     self.lbl_task_response.config(text='Debe haber al menos un miembro asignado para tarea personalizada.', fg=self.root.COLOR_DANGER); return
                 miembros_a_asignar_final = [[alias, data['var'].get()] for alias, data in self.members_to_assign.items()]
-            is_registered_task, response_msg = TaskController.event_register_task_group(id_grupo=self.selected_group_id, nombre=nombre, fecha=fecha, prioridad=prioridad, detalle=detalle, miembros_disponible=miembros_a_asignar_final)
+
+            is_registered_task, response_msg = TaskController.event_register_task_group(
+                id_grupo=self.selected_group_id,
+                nombre=nombre,
+                fecha=fecha,
+                prioridad=prioridad,
+                detalle=detalle,
+                tipo_check=self.group_check_var.get(),
+                miembros_disponible=miembros_a_asignar_final
+            )
         else:
             is_registered_task, response_msg = TaskController.event_register_task_user(nombre=nombre, fecha=fecha, prioridad=prioridad, detalle=detalle)
 
