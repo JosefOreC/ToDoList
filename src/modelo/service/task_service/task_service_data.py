@@ -66,7 +66,6 @@ class TaskServiceData:
 
         session.commit()
 
-
     @staticmethod
     def get_tasks_user_list_date(usuario_id: int, fecha_inicio: str or date, fecha_fin: str or date = None,
                                  activo = True,

@@ -71,6 +71,12 @@ class UpdateTask:
         Args:
             realizado (bool): True si fue realizada, False si no.
         """
+        if self.__tarea.type_check is True:
+            usuario_tareas = session.query(UsuarioTarea).filter_by(IDTarea=self.__usuario_tarea.IDTarea,
+                                                                   IDGrupo=self.__usuario_tarea.IDGrupo).all()
+            for usuario_tarea in usuario_tareas:
+                usuario_tarea.Realizado = realizado
+
         self.__usuario_tarea.Realizado = realizado
 
     def update_detalle(self, detalle):

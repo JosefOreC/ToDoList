@@ -51,7 +51,7 @@ class RegisterTask:
 
         Args:
             id_user (int): ID del usuario a asociar con la tarea.
-            disponible (bool): Indica si el usuario está disponible.
+            disponible (bool): Indica si el usuario tiene disponible la tarea para edición.
         """
         usuario_tarea = UsuarioTarea(IDUsuario=id_user, IDGrupo=self.id_grupo, Disponible=disponible)
         self.relaciones.append(usuario_tarea)

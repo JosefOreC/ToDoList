@@ -101,7 +101,7 @@ class TaskController:
         return RegisterTask(response).register_task()
 
     @staticmethod
-    def __create_tarea(nombre: str, fecha: str, prioridad: int, detalle: str) -> bool or Tarea:
+    def __create_tarea(nombre: str, fecha: str, prioridad: int, detalle: str, tipo_check: bool = False) -> bool or Tarea:
         """Crea una instancia de tarea validando fecha y prioridad.
 
         Args:
@@ -255,7 +255,7 @@ class TaskController:
                                                                 detalle=detalle)
 
     @staticmethod
-    def event_register_task_group(id_grupo, nombre: str, fecha: str, prioridad: int, detalle: str,
+    def event_register_task_group(id_grupo, nombre: str, fecha: str, prioridad: int, detalle: str, tipo_check = False,
                                   miembros_disponible: list[[str, bool]] or str = 'all'): #lista (alias, disponible)
         """Registra una nueva tarea para un grupo.
 
@@ -265,6 +265,7 @@ class TaskController:
             fecha (str): Fecha de la tarea.
             prioridad (int): Prioridad entre 1 y 5.
             detalle (str): Detalles de la tarea.
+            tipo_check: Tarea check 0:individual, 1:grupalmente
             miembros_disponible (list or str): Lista de tuplas (alias, disponible) o 'all'.
 
         Returns:
@@ -274,7 +275,7 @@ class TaskController:
                 not in ['master', 'editor']):
             return False, "No se tienen los permisos para realizar estos cambios."
 
-        is_tarea_create, response = TaskController.__create_tarea(nombre,fecha,prioridad,detalle)
+        is_tarea_create, response = TaskController.__create_tarea(nombre,fecha,prioridad,detalle, tipo_check)
         if miembros_disponible != 'all':
             miembros_id_disponible = [[UserServiceData.recover_id_user_for_alias(miembro), disponible]
                                       for miembro, disponible in miembros_disponible]

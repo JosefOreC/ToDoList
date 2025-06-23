@@ -21,7 +21,7 @@ class Tarea(Base):
     """
         Tipo de checkeo - individual - no individual
     """
-    type_check = Column(Boolean, default=True) # False: Individual, True: Grupal
+    type_check = Column(Boolean, default=False) # False: Individual, True: Grupal
 
     tarea_usuarios = relationship('UsuarioTarea', back_populates='tarea')
 
