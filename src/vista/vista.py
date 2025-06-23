@@ -1530,22 +1530,21 @@ class ViewGroupDetailsView:
         pack_info = {'side': 'right', 'padx': 5, 'ipady': 3, 'ipadx': 10}
         self.root.create_button(container=parent, name='btnBackToGroups', funcion=self.go_to_manage_groups,
                                 text='← Volver', bg='#6C757D', pack_info=pack_info)
+
+        # El botón de editar grupo solo aparece si el usuario es 'master'
         if self.user_role == 'master':
+            self.root.create_button(container=parent, name='btnEditGroup',
+                                    funcion=self.open_edit_group_window,  # Llama al nuevo método
+                                    text='Editar Grupo', bg='#5D6D7E', pack_info=pack_info)
             self.root.create_button(container=parent, name='btnAddMember',
-                                              funcion=self.open_add_member_window,
-                                              text='Agregar Miembro', bg=self.root.COLOR_SUCCESS, pack_info=pack_info)
+                                    funcion=self.open_add_member_window,
+                                    text='Agregar Miembro', bg=self.root.COLOR_SUCCESS, pack_info=pack_info)
 
         if self.user_role in ['master', 'editor']:
             self.root.create_button(container=parent, name='btnCreateTaskForGroup',
-                                                      funcion=self.open_create_task_window,
-                                                      text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY,
-                                                      pack_info=pack_info)
-        if self.user_role == 'master':
-            btn_edit = self.root.create_button(container=parent, name='btnEditGroup',
-                                               funcion=lambda: messagebox.showinfo("WIP",
-                                                                                   "Funcionalidad para editar grupo no implementada."),
-                                               text='Editar Grupo', bg='#5D6D7E', pack_info=pack_info)
-            btn_edit.config(state='normal' if self.user_role == 'master' else 'disabled')
+                                    funcion=self.open_create_task_window,
+                                    text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY,
+                                    pack_info=pack_info)
 
     def go_to_manage_groups(self):
         ManageGroupsView(root=self.root)
@@ -1586,6 +1585,17 @@ class ViewGroupDetailsView:
         """Recarga toda la vista para reflejar cambios (como nuevos miembros)."""
 
         self.create_view_group_interface()
+
+    def open_edit_group_window(self):
+        """
+        Abre la ventana emergente para editar los datos de este grupo.
+        """
+        EditGroupView(
+            parent_root_view=self.root,
+            parent_view=self,
+            group_id=self.group_id,
+            group_data=self.group_data
+        )
 
     def open_create_task_window(self):
         """Abre la ventana emergente para crear una tarea para este grupo específico."""
@@ -1922,3 +1932,79 @@ class RegisterTaskForGroupView(Toplevel):
             self.destroy()
         else:
             messagebox.showerror("Error", response, parent=self)
+
+
+class EditGroupView(Toplevel):
+    """
+    Ventana emergente para editar el nombre y la descripción de un grupo.
+    Accesible solo para el 'master' del grupo.
+    """
+
+    def __init__(self, parent_root_view: 'RootView', parent_view: 'ViewGroupDetailsView', group_id: int,
+                 group_data: dict):
+        super().__init__(parent_root_view.root)
+        self.root_view = parent_root_view
+        self.parent_view = parent_view
+        self.group_id = group_id
+        self.group_data = group_data
+
+        self.title("Editar Grupo")
+        self.config(bg=self.root_view.COLOR_BACKGROUND, padx=20, pady=20)
+        self.transient(self.root_view.root)
+        self.grab_set()
+        self.minsize(450, 250)
+
+        self.create_widgets()
+        self.root_view.center_window(top_level_window=self)
+
+    def create_widgets(self):
+        tk.Label(self, text="Editar Información del Grupo", font=self.root_view.FONT_TITLE, bg=self.cget('bg')).pack(
+            pady=(0, 20))
+
+        form_frame = tk.Frame(self, bg=self.cget('bg'))
+        form_frame.pack(fill='x', expand=True)
+        form_frame.grid_columnconfigure(1, weight=1)
+
+        # Campo para el nombre del grupo
+        tk.Label(form_frame, text="Nombre:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).grid(row=0, column=0,
+                                                                                                      sticky='w',
+                                                                                                      pady=5)
+        self.nombre_entry = tk.Entry(form_frame, font=self.root_view.FONT_BODY)
+        self.nombre_entry.grid(row=0, column=1, sticky='ew', ipady=4)
+        self.nombre_entry.insert(0, self.group_data.get('nombre', ''))
+
+        # Campo para la descripción del grupo
+        tk.Label(form_frame, text="Descripción:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).grid(row=1,
+                                                                                                           column=0,
+                                                                                                           sticky='w',
+                                                                                                           pady=5)
+        self.desc_entry = tk.Entry(form_frame, font=self.root_view.FONT_BODY)
+        self.desc_entry.grid(row=1, column=1, sticky='ew', ipady=4)
+        self.desc_entry.insert(0, self.group_data.get('descripcion', ''))
+
+        # Botones de acción
+        footer_frame = tk.Frame(self, bg=self.cget('bg'))
+        footer_frame.pack(fill='x', pady=(20, 0))
+
+        tk.Button(footer_frame, text="Guardar Cambios", command=self.save_changes, bg=self.root_view.COLOR_SUCCESS,
+                  fg='white').pack(side='left', expand=True, padx=5, ipady=3)
+        tk.Button(footer_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').pack(side='right',
+                                                                                                      expand=True,
+                                                                                                      padx=5, ipady=3)
+
+    def save_changes(self):
+        nuevo_nombre = self.nombre_entry.get().strip()
+        nueva_desc = self.desc_entry.get().strip()
+        # Llamada al controlador para actualizar los datos
+        request = GroupController.update_data_group(
+            id_grupo=self.group_id,
+            nombre=nuevo_nombre,
+            descripcion=nueva_desc
+        )
+
+        if request['success']:
+            messagebox.showinfo("Éxito", request['response'], parent=self)
+            self.parent_view.refresh_view()  # Actualiza la vista de detalles del grupo
+            self.destroy()
+        else:
+            messagebox.showerror("Error al Guardar", request['response'], parent=self)

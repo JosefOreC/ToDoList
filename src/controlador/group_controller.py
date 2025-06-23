@@ -303,7 +303,7 @@ class GroupController:
                 'response': "No se tienen permisos para realizar esta acción."
             }
 
-        if nombre is None and descripcion is None:
+        if not (nombre or descripcion):
             return {
                 'success': False,
                 'response': "No se hicieron cambios."

@@ -172,7 +172,7 @@ class GroupServiceData:
             session.commit()
         except IntegrityError:
             session.rollback()
-            raise Exception('No se pudo actualizar los datos')
+            raise Exception('No se actualizaron los datos porque ya existe un grupo con el mismo nombre.')
 
     @staticmethod
     def delete_group_in_all_task_with_id_group(id_grupo):
