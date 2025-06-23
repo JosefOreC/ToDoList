@@ -97,7 +97,7 @@ class DataFormat:
         """
         response = []
 
-        for tarea, dis, rea, id_grupo in tareas:
+        for tarea, dis, rea, id_grupo, arc in tareas:
             if not tarea.Activo:
                 continue
             if id_grupo:
@@ -110,6 +110,7 @@ class DataFormat:
                        'nombre': tarea.Nombre,
                        'disponible': dis,
                        'realizado': rea,
+                       'archivado': arc,
                        'fecha': tarea.Fecha_programada.strftime("%d-%m-%Y"),
                        'prioridad': tarea.Prioridad,
                        'nombre_prioridad': DataFormat.prioridades.get(tarea.Prioridad),

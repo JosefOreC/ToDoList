@@ -54,6 +54,5 @@ class MainViewController:
         response = TaskController.recover_task_archivate()
         if response['data']['tareas']:
             response['data']['tareas'] = DataFormat.convert_to_dict_task_data(response['data']['tareas'])
-
         return response
 

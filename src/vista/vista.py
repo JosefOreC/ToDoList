@@ -34,7 +34,7 @@ class RootView:
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.geometry("1150x750")
+        self.root.geometry("1250x850")
         self.root.config(bg=self.COLOR_BACKGROUND)
         self.root.title('TO-DO LIST | By Gemini')
         self.center_window()
@@ -299,8 +299,8 @@ class MainView:
         self.tasks_per_page = 5
         self.total_pages = 1
         self.recuperar = 'normal'
-        self.funcion_recover_task = {'normal': MainViewController.recover_task_for_date, 'archivadas':
-            MainViewController.recover_task_archivade}
+        self.funcion_recover_task = {'normal': lambda:MainViewController.recover_task_for_date(self.current_date),
+                                     'archivadas':MainViewController.recover_task_archivade}
 
         # Widgets que necesitan ser referenciados
         self.title_label = None
@@ -311,6 +311,8 @@ class MainView:
         self.page_label = None
 
         self.create_main_interface()
+
+
 
     def create_main_interface(self):
         self.root.limpiar_componentes()
@@ -324,6 +326,10 @@ class MainView:
                                 text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY, pack_info=pack_info_btn)
         self.root.create_button(container=header_frame, name='btnManageGroups', funcion=self.go_to_manage_groups,
                                 text='👥 Gestionar Grupos', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_btn)
+
+        self.root.create_button(container=header_frame, name='btnVerArchivados', funcion=self.event_change_type_archivate,
+                                text='📂Archivados', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_btn)
+
         self.root.create_button(container=header_frame, name='btnMiPerfil', funcion=self.go_to_profile,
                                 text='Mi Perfil', bg='#6C757D',
                                 pack_info={'side': 'right', 'padx': 10, 'ipady': 3, 'ipadx': 10})
@@ -362,14 +368,23 @@ class MainView:
 
         self.setup_task_display()
 
+    def event_change_type_archivate(self):
+        self.recuperar = 'archivadas'
+        self.root.componentes.get('btnVerArchivados').config(text='Volver',
+                                                             command=self.event_change_type_normal)
+        self.setup_task_display()
+
+    def event_change_type_normal(self):
+        self.recuperar = 'normal'
+        self.root.componentes.get('btnVerArchivados').config(text='📂Archivados',
+                                                             command=self.event_change_type_archivate)
+        self.setup_task_display()
+
     def setup_task_display(self):
         """Función central que carga datos para la fecha actual y refresca toda la UI."""
         self.update_date_labels()
 
-        if self.recuperar == 'normal':
-            request = self.funcion_recover_task.get(self.recuperar)(fecha=self.current_date)
-        else:
-            request = self.funcion_recover_task.get(self.recuperar)
+        request = self.funcion_recover_task.get(self.recuperar)()
 
         if not request['success']:
             messagebox.showerror(title="Error al Cargar Tareas", message=request['response'])
@@ -483,13 +498,16 @@ class MainView:
             tk.Label(info_frame, text=f"Grupo: {tarea.get('grupo')}", font=("Helvetica", 10), bg=info_frame.cget('bg'),
                      fg='#566573', anchor='w').pack(fill='x', pady=(5, 0))
 
+        if self.recuperar=='archivadas':
+            tk.Label(info_frame, text=f"Fecha: {tarea.get('fecha')}", font=("Helvetica", 10), bg=info_frame.cget('bg'),
+                     fg='#566573', anchor='w').pack(fill='y', pady=(5, 0))
+
         actions_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
         actions_frame.pack(side='right', fill='y', padx=(10, 0))
 
         disponible, es_de_grupo, rol = tarea.get('disponible', True), tarea.get('is_in_group', False), tarea.get('rol',
                                                                                                                  None)
         can_edit = disponible and (not es_de_grupo or rol not in ['miembro'])
-        can_archive = disponible or (es_de_grupo and rol not in ['miembro']) or (not es_de_grupo)
         can_delete = not es_de_grupo or rol not in ['miembro', 'editor']
         realizado = tarea.get('realizado', False)
 
@@ -511,11 +529,16 @@ class MainView:
             btn_edit.config(state='normal' if can_edit else 'disabled', cursor="hand2" if can_edit else "arrow")
             btn_edit.pack(side='left', padx=2)
 
-        btn_archive = tk.Button(actions_frame, text='Archivar', bg='#5D6D7E', fg=self.root.COLOR_TEXT_LIGHT,
+        btn_archive = tk.Button(actions_frame, text='Archivar' if not tarea.get('archivado') else 'Desarchivar'
+                                , bg='#5D6D7E' if not tarea.get('archivado') else
+                                self.root.COLOR_SUCCESS, fg=self.root.COLOR_TEXT_LIGHT,
                                 font=self.root.FONT_BUTTON, relief='flat',
-                                command=lambda id_t=task_id: self.btn_archive_task(id_tarea=id_t))
+                                command=lambda id_t=task_id: (self.btn_archive_task(id_tarea=id_t)
+                                if not tarea.get('archivado')
+                                else self.btn_unarchivate_task(id_t)))
         btn_archive.config(state='normal', cursor="hand2")
         btn_archive.pack(side='left', padx=2)
+
 
         if not can_delete:
             return
@@ -558,12 +581,28 @@ class MainView:
 
         if messagebox.askyesno(title="Confirmar Archivar",
                                message=f"¿Estás seguro de que deseas archivar la tarea:\n\n'{task.get('nombre')}'?"):
-            is_archived, response = TaskController.event_archive_task(id_tarea=id_tarea)
-            if is_archived:
-                messagebox.showinfo(title="Tarea Archivada", message=response)
+            response = TaskController.event_archive_task(id_tarea=id_tarea)
+            if response.get('success'):
+                messagebox.showinfo(title="Tarea Archivada", message=response.get('response'))
                 self.setup_task_display()
             else:
-                messagebox.showerror(title="Error", message=f"No se pudo archivar la tarea:\n{response}")
+                messagebox.showerror(title="Error", message=f"No se pudo archivar la tarea:\n{response.get('response')}")
+
+    def btn_unarchivate_task(self, id_tarea):
+
+        task = self.find_task_by_id(id_tarea)
+        if not task: return
+        if messagebox.askyesno(title="Confirmar Desarchivar",
+                               message=f"¿Estás seguro de que deseas desarchivar la tarea:\n\n'{task.get('nombre')}'?"):
+            response = TaskController.event_unarchive_task(id_tarea=id_tarea)
+            if response.get('success'):
+                messagebox.showinfo(title="Tarea Desarchivada", message=response.get('response'))
+                self.setup_task_display()
+            else:
+                messagebox.showerror(title="Error",
+                                     message=f"No se pudo desarchivar la tarea:\n{response.get('response')}")
+
+
 
     def btn_delete_task(self, id_tarea):
         task = self.find_task_by_id(id_tarea)
@@ -1498,7 +1537,7 @@ class ViewGroupDetailsView:
 
     def refresh_view(self):
         """Recarga toda la vista para reflejar cambios (como nuevos miembros)."""
-        print("Refrescando la vista de gestión de grupo...")
+
         self.create_view_group_interface()
 
     def btn_archive_task(self, id_tarea):

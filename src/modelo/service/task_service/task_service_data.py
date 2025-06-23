@@ -82,7 +82,7 @@ class TaskServiceData:
                             f'\nNo se recuperó datos.')
         resultados = session.query(Tarea,
                                    UsuarioTarea.Disponible,
-                                   UsuarioTarea.Realizado, UsuarioTarea.IDGrupo).join(UsuarioTarea,
+                                   UsuarioTarea.Realizado, UsuarioTarea.IDGrupo, UsuarioTarea.Archivado).join(UsuarioTarea,
                                    UsuarioTarea.IDUsuario==usuario_id).filter(UsuarioTarea.IDTarea==Tarea.IDTarea,
                                    Tarea.Fecha_programada >= fecha_inicio,
                                    Tarea.Fecha_programada <= fecha_fin,
@@ -99,7 +99,7 @@ class TaskServiceData:
 
         resultados = session.query(Tarea,
                                     UsuarioTarea.Disponible,
-                                    UsuarioTarea.Realizado, UsuarioTarea.IDGrupo).join(UsuarioTarea,
+                                    UsuarioTarea.Realizado, UsuarioTarea.IDGrupo, UsuarioTarea.Archivado).join(UsuarioTarea,
                                     UsuarioTarea.IDUsuario == usuario_id).filter(
                                     UsuarioTarea.IDTarea == Tarea.IDTarea,
                                     Tarea.Activo == activo,
@@ -108,7 +108,7 @@ class TaskServiceData:
 
     @staticmethod
     def get_task_user_archivade(usuario_id: int):
-        return TaskServiceData.get_tasks_user_list_all(usuario_id, archivado = False)
+        return TaskServiceData.get_tasks_user_list_all(usuario_id, archivado = True)
 
     @staticmethod
     def get_tasks_session_user_list_date(fecha: str or date):

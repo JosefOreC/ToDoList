@@ -5,7 +5,7 @@ Este módulo contiene el controlador encargado de manejar la lógica relacionada
 con la gestión de tareas, como la recuperación, creación, modificación o eliminación
 de tareas de usuario.
 """
-
+from http.client import responses
 
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.entities.tarea import Tarea
@@ -287,7 +287,7 @@ class TaskController:
         return RegisterTask(tarea=response, id_grupo=id_grupo,miembro_disponible=miembros_id_disponible).register_task()
 
     @staticmethod
-    def event_archive_task(id_tarea):
+    def event_archive_task(id_tarea)->dict:
         """Marca una tarea como archivada.
 
         Args:
@@ -299,9 +299,16 @@ class TaskController:
         try:
             TaskServiceData.update_task_user(id_usuario=SessionManager.get_instance().usuario.IDUsuario,
                                              id_tarea=id_tarea, archivado=True)
-            return True, "Tarea Archivada"
+            success = True
+            response = "Tarea Archivada"
         except Exception as E:
-            return False, f"No se pudo archivar la tarea. \n{E}"
+            success = False
+            response = "No se pudo archivar la tarea. \n{E}"
+
+        return {
+            'success': success,
+            'response': response,
+        }
 
     @staticmethod
     def event_delete_task(id_tarea):
@@ -345,6 +352,22 @@ class TaskController:
             'data': {
                 'tareas': DataFormat.convert_to_dict_task_data_groups(resultados) if resultados else None
             }
+        }
+
+    @staticmethod
+    def event_unarchive_task(id_tarea)->dict:
+        try:
+            TaskServiceData.update_task_user(id_usuario=SessionManager.get_id_user(), id_tarea=id_tarea,
+                                             archivado=False)
+            success = True
+            response = 'Se archivó la tarea'
+        except:
+            success = False
+            response = 'No se pudo desarchivar la tarea'
+
+        return {
+            'success': success,
+            'response': response
         }
 
 
