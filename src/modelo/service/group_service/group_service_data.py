@@ -4,10 +4,14 @@ Módulo para la gestión de grupos y sus relaciones con usuarios.
 
 from types import NoneType
 
-from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol, Usuario, UsuarioTarea
+from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol, Usuario, UsuarioTarea, Tarea
+from datetime import date
 from src.modelo.database_management.base.declarative_base import session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
+
+from src.modelo.service.session_service.session_manager import SessionManager
+
 
 class GroupServiceData:
     @staticmethod
@@ -182,6 +186,46 @@ class GroupServiceData:
             relacion.IDGrupo = None
 
         session.commit()
+
+    @staticmethod
+    def __delete_tareas_relacion(relaciones_tareas: list):
+        for relacion in relaciones_tareas:
+            session.delete(relacion)
+
+    @staticmethod
+    def __delete_member_group(id_grupo, id_usuario, delete_all_task):
+        relacion_grupo = session.query(UsuarioGrupo).filter_by(IDGrupo=id_grupo, IDUsuario=id_usuario).first()
+        relaciones_tareas = (session.query(UsuarioTarea).join(Tarea, Tarea.IDTarea == UsuarioTarea.IDTarea)
+                             .filter(UsuarioGrupo.IDGrupo == id_grupo, UsuarioGrupo.IDUsuario==id_usuario))
+        if not delete_all_task:
+            relaciones_tareas = relaciones_tareas.filter(Tarea.Fecha_programada > date.today())
+
+        relaciones_tareas=relaciones_tareas.all()
+
+        GroupServiceData.__delete_tareas_relacion(relaciones_tareas)
+
+        session.delete(relacion_grupo)
+        session.commit()
+
+    @staticmethod
+    def out_member_group_session_manager(id_grupo, new_master: int = None, delete_all_task=False):
+        id_usuario = SessionManager.get_id_user()
+        if GroupServiceData.get_rol_in_group(id_usuario=id_usuario, id_grupo=id_grupo) == Rol.master:
+            if not new_master:
+                raise Exception("Como master:\nNo se puede salir del grupo sin antes elegir un nuevo master.")
+
+        GroupServiceData.__delete_member_group(id_grupo=id_grupo, id_usuario=id_usuario,
+                                               delete_all_task=delete_all_task)
+
+    @staticmethod
+    def expel_member_group(id_grupo, id_usuario, delete_registers:bool=False):
+        if GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user(), id_grupo=id_grupo) != Rol.master:
+            raise Exception("No se tienen permisos para eliminar miembros de este grupo.")
+
+        if not GroupServiceData.is_user_in_group(id_grupo=id_grupo, id_usuario=id_usuario):
+            raise Exception("El usuario a eliminar no está en el grupo.")
+
+        GroupServiceData.__delete_member_group(id_grupo=id_grupo,id_usuario=id_usuario, delete_all_task=delete_registers)
 
     @staticmethod
     def __delete_group(id_grupo):
