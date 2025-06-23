@@ -1388,6 +1388,20 @@ class ViewGroupDetailsView:
             for task in tasks_to_show: self.insert_task_card(tarea=task)
         self.update_task_pagination_controls()
 
+    def btn_delete_task(self, id_tarea):
+        task = self.find_task_by_id(id_tarea)
+        if not task: return
+
+        if messagebox.askyesno(title="Confirmar Eliminación",
+                               message=f"¡ADVERTENCIA!\n\n¿Estás seguro de que deseas eliminar la tarea:\n\n'{task.get('nombre')}'?\n\nEsta acción es definitiva.",
+                               icon='warning'):
+            is_deleted, response = TaskController.event_delete_task(id_tarea=id_tarea)
+            if is_deleted:
+                messagebox.showinfo(title="Tarea Eliminada", message=response)
+                self.setup_task_display()
+            else:
+                messagebox.showerror(title="Error", message=f"No se pudo eliminar la tarea:\n{response}")
+
     def insert_task_card(self, tarea: dict):
         task_id = tarea.get('id_tarea')
         task_frame = tk.Frame(self.tasks_widgets_frame, bg=self.root.COLOR_FRAME, relief='solid', borderwidth=1,
@@ -1431,7 +1445,7 @@ class ViewGroupDetailsView:
                                           fg=self.root.COLOR_TEXT_LIGHT)
         if is_archived:
             btn_archive_unarchive.config(text="Desarchivar", bg=self.root.COLOR_SUCCESS,
-                                         command=lambda id_t=task_id: self.btn_unarchive_task(id_tarea=id_t),
+                                         command=lambda id_t=task_id: self.btn_unarchivate_task(id_tarea=id_t),
                                          state='normal' if can_archive_permission else 'disabled',
                                          cursor="hand2" if can_archive_permission else "arrow")
         else:
@@ -1440,13 +1454,46 @@ class ViewGroupDetailsView:
                                          state='normal' if can_archive_permission else 'disabled',
                                          cursor="hand2" if can_archive_permission else "arrow")
         btn_archive_unarchive.pack(pady=2, fill='x')
-        if not can_edit:
+        if not can_delete:
             return
         btn_delete = tk.Button(actions_frame, text='Eliminar', bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT,
                                font=self.root.FONT_BUTTON, relief='flat',
                                command=lambda id_t=task_id: self.btn_delete_task(id_tarea=id_t))
         btn_delete.config(state='normal' if can_delete else 'disabled', cursor="hand2" if can_delete else "arrow")
         btn_delete.pack(pady=2, fill='x')
+
+    def find_task_by_id_in_date(self, task_id):
+        return next((task for task in self.all_tasks_for_date if task.get('id_tarea') == task_id), None)
+
+    def btn_archive_task(self, id_tarea):
+        task = self.find_task_by_id(id_tarea)
+        if not task: return
+
+        if messagebox.askyesno(title="Confirmar Archivar",
+                               message=f"¿Estás seguro de que deseas archivar la tarea:\n\n'{task.get('nombre')}'?"):
+            response = TaskController.event_archive_task(id_tarea=id_tarea)
+            if response.get('success'):
+                messagebox.showinfo(title="Tarea Archivada", message=response.get('response'))
+                self.setup_task_display()
+
+            else:
+                messagebox.showerror(title="Error", message=f"No se pudo archivar la tarea:\n{response.get('response')}")
+
+
+    def btn_unarchivate_task(self, id_tarea):
+
+        task = self.find_task_by_id(id_tarea)
+        if not task: return
+        if messagebox.askyesno(title="Confirmar Desarchivar",
+                               message=f"¿Estás seguro de que deseas desarchivar la tarea:\n\n'{task.get('nombre')}'?"):
+            response = TaskController.event_unarchive_task(id_tarea=id_tarea)
+            if response.get('success'):
+                messagebox.showinfo(title="Tarea Desarchivada", message=response.get('response'))
+                self.setup_task_display()
+            else:
+                messagebox.showerror(title="Error",
+                                     message=f"No se pudo desarchivar la tarea:\n{response.get('response')}")
+
 
     def setup_task_pagination_controls(self):
         for widget in self.task_pagination_frame.winfo_children(): widget.destroy()
@@ -1515,7 +1562,7 @@ class ViewGroupDetailsView:
     def on_date_selected(self, new_date):
         if new_date: self.current_date = new_date; self.setup_task_display()
 
-    def find_task_by_id_in_date(self, task_id):
+    def find_task_by_id(self, task_id):
         return next((task for task in self.all_tasks_for_date if task.get('id_tarea') == task_id), None)
 
     def show_task_details(self, tarea: dict):
@@ -1539,19 +1586,6 @@ class ViewGroupDetailsView:
         """Recarga toda la vista para reflejar cambios (como nuevos miembros)."""
 
         self.create_view_group_interface()
-
-    def btn_archive_task(self, id_tarea):
-        if messagebox.askyesno("Confirmar", f"¿Archivar esta tarea?"): messagebox.showinfo("WIP",
-                                                                                           "Funcionalidad de archivar no conectada."); self.setup_task_display()
-
-    def btn_unarchive_task(self, id_tarea):
-        if messagebox.askyesno("Confirmar", f"¿Desarchivar esta tarea?"): messagebox.showinfo("WIP",
-                                                                                              "Funcionalidad de desarchivar no conectada."); self.setup_task_display()
-
-    def btn_delete_task(self, id_tarea):
-        if messagebox.askyesno("¡PELIGRO!", f"¿ELIMINAR esta tarea? Esta acción no se puede deshacer.",
-                               icon='warning'): messagebox.showinfo("WIP",
-                                                                    "Funcionalidad de eliminar no conectada."); self.setup_task_display()
 
     def open_create_task_window(self):
         """Abre la ventana emergente para crear una tarea para este grupo específico."""
