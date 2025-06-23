@@ -1424,7 +1424,8 @@ class ViewGroupDetailsView:
         if not task: return
 
         if messagebox.askyesno(title="Confirmar Eliminación",
-                               message=f"¡ADVERTENCIA!\n\n¿Estás seguro de que deseas eliminar la tarea:\n\n'{task.get('nombre')}'?\n\nEsta acción es definitiva.",
+                               message=f"¡ADVERTENCIA!\n\n¿Estás seguro de que deseas eliminar la tarea:\n"
+                                       f"\n'{task.get('nombre')}'?\n\nEsta acción es definitiva.",
                                icon='warning'):
             is_deleted, response = TaskController.event_delete_task(id_tarea=id_tarea)
             if is_deleted:
@@ -1448,29 +1449,33 @@ class ViewGroupDetailsView:
         if is_archived: tk.Label(info_frame, text="Archivado", font=("Helvetica", 9, "italic"), fg='grey',
                                  bg=info_frame.cget('bg'), anchor='w').pack(fill='x', pady=(5, 0))
         actions_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
-        actions_frame.pack(side='right', fill='y', padx=(10, 0))
+        actions_frame.pack(side='right', padx=(10, 0))  # Se elimina fill='y'
+
         realizado = tarea.get('realizado', False)
         can_edit = self.user_role in ['master', 'editor'] and tarea.get('disponible')
         can_archive_permission = True
         can_delete = self.user_role == 'master'
+
+        # Se empaquetan los botones con side='left' para alinearlos horizontalmente
+        pack_info_buttons = {'side': 'left', 'padx': 2}
 
         btn_check = tk.Button(actions_frame, text='✔' if realizado else '✖',
                               bg=self.root.COLOR_SUCCESS if realizado else self.root.COLOR_DANGER,
                               fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat', width=3,
                               command=lambda id_t=task_id: self.btn_check_task(id_tarea=id_t), cursor="hand2")
         btn_check.config(state='disabled' if is_archived else 'normal')
+        btn_check.pack(**pack_info_buttons)
 
-        btn_check.pack(pady=2, fill='x')
         btn_details = tk.Button(actions_frame, text='Detalle', bg='#17A2B8', fg=self.root.COLOR_TEXT_LIGHT,
                                 font=self.root.FONT_BUTTON, relief='flat',
                                 command=lambda t=tarea: self.show_task_details(tarea=t), cursor="hand2")
-        btn_details.pack(pady=2, fill='x')
+        btn_details.pack(**pack_info_buttons)
 
         if can_edit:
             btn_edit = tk.Button(actions_frame, text='Editar', bg='#6C757D', fg=self.root.COLOR_TEXT_LIGHT,
                                  font=self.root.FONT_BUTTON, relief='flat',
                                  command=lambda t=tarea: self.btn_edit_task(task_data=t))
-            btn_edit.pack(pady=2, fill='x')
+            btn_edit.pack(**pack_info_buttons)
 
         btn_archive_unarchive = tk.Button(actions_frame, font=self.root.FONT_BUTTON, relief='flat',
                                           fg=self.root.COLOR_TEXT_LIGHT)
@@ -1484,14 +1489,15 @@ class ViewGroupDetailsView:
                                          command=lambda id_t=task_id: self.btn_archive_task(id_tarea=id_t),
                                          state='normal' if can_archive_permission else 'disabled',
                                          cursor="hand2" if can_archive_permission else "arrow")
-        btn_archive_unarchive.pack(pady=2, fill='x')
-        if not can_delete:
-            return
-        btn_delete = tk.Button(actions_frame, text='Eliminar', bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT,
-                               font=self.root.FONT_BUTTON, relief='flat',
-                               command=lambda id_t=task_id: self.btn_delete_task(id_tarea=id_t))
-        btn_delete.config(state='normal' if can_delete else 'disabled', cursor="hand2" if can_delete else "arrow")
-        btn_delete.pack(pady=2, fill='x')
+        btn_archive_unarchive.pack(**pack_info_buttons)
+
+        if can_delete:
+            btn_delete = tk.Button(actions_frame, text='Eliminar', bg=self.root.COLOR_DANGER,
+                                   fg=self.root.COLOR_TEXT_LIGHT,
+                                   font=self.root.FONT_BUTTON, relief='flat',
+                                   command=lambda id_t=task_id: self.btn_delete_task(id_tarea=id_t))
+            btn_delete.config(state='normal', cursor="hand2")
+            btn_delete.pack(**pack_info_buttons)
 
     def find_task_by_id_in_date(self, task_id):
         return next((task for task in self.all_tasks_for_date if task.get('id_tarea') == task_id), None)
@@ -1770,6 +1776,7 @@ class RegisterTaskForGroupView(Toplevel):
         self.current_user_alias = SessionController.get_alias_user()
         self.all_group_members_data = {m['alias']: m['rol'] for m in group_members}
         self.members_to_assign = {}
+        self.group_check_var = tk.BooleanVar(value=False)
 
         # Widgets
         self.date_display_label = None
@@ -1826,6 +1833,18 @@ class RegisterTaskForGroupView(Toplevel):
             self.inputs[key] = inp
 
         row_idx = len(labels_texts) + 1
+
+        check_type_frame = tk.Frame(form_content_frame, bg=self.cget('bg'))
+        check_type_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10, 0));
+        row_idx += 1
+        tk.Label(check_type_frame, text='Tipo de Check:', font=self.root.FONT_LABEL,
+                 bg=check_type_frame.cget('bg')).pack(side='left', padx=5)
+        tk.Radiobutton(check_type_frame, text="Individual", variable=self.group_check_var, value=False,
+                       font=self.root.FONT_BODY, bg=check_type_frame.cget('bg'),
+                       activebackground=check_type_frame.cget('bg')).pack(side='left', padx=5)
+        tk.Radiobutton(check_type_frame, text="Grupal (un check para todos)", variable=self.group_check_var, value=True,
+                       font=self.root.FONT_BODY, bg=check_type_frame.cget('bg'),
+                       activebackground=check_type_frame.cget('bg')).pack(side='left', padx=5)
 
         self.assignment_frame = tk.Frame(form_content_frame, bg=self.cget('bg'))
         self.assignment_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10, 0));
@@ -1954,8 +1973,9 @@ class RegisterTaskForGroupView(Toplevel):
 
         is_registered, response = TaskController.event_register_task_group(
             id_grupo=self.group_id, nombre=nombre, fecha=fecha_str,
-            prioridad=prioridad, detalle=detalle, miembros_disponible=miembros_disponible
-        )
+            prioridad=prioridad, detalle=detalle,
+            tipo_check=self.group_check_var.get(),
+            miembros_disponible=miembros_disponible)
 
         if is_registered:
             messagebox.showinfo("Éxito", response, parent=self)
