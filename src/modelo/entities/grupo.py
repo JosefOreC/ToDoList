@@ -2,7 +2,7 @@
     Clase que representa a la entidad Grupo de la base de datos
 
 """
-from sqlalchemy import Column, Integer, String, DATETIME, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DATETIME, ForeignKey, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship
 
 
@@ -17,6 +17,7 @@ class Grupo(Base):
     Nombre = Column(String(50), nullable=False)
     Fecha_creacion = Column(DATETIME)
     Descripcion = Column(String(150))
+    Activo = Column(Boolean, default=True)
 
     IDMaster = Column(Integer, ForeignKey('Usuario.IDUsuario'))
     master = relationship('Usuario', back_populates='grupos_master', foreign_keys=[IDMaster])
