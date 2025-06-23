@@ -3,6 +3,7 @@
 
 """
 
+
 from sqlalchemy.exc import IntegrityError
 
 from src.controlador.task_controller import TaskController
@@ -139,6 +140,7 @@ class GroupController:
         Returns:
             str: Rol del usuario dentro del grupo.
         """
+
         return GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo).name
 
     @staticmethod
@@ -164,7 +166,7 @@ class GroupController:
         Returns:
             tuple: (bool, str) indicando si se agregó correctamente o no, y un mensaje.
         """
-        if GroupController.get_rol_in_group(SessionManager.get_id_user()) != 'master':
+        if GroupController.get_rol_in_group(id_grupo) != 'master':
             return False, "No se tienen los permisos para realizar estos cambios."
 
         try:
@@ -255,7 +257,7 @@ class GroupController:
     @staticmethod
     def set_rol_member(alias_member: str, id_grupo: int, rol: Rol):
 
-        if GroupController.get_rol_in_group(SessionManager.get_id_user()) != 'master':
+        if GroupController.get_rol_in_group(id_grupo) != 'master':
             return False, "No se tienen los permisos para realizar estos cambios."
 
         try:
@@ -281,7 +283,7 @@ class GroupController:
 
     @staticmethod
     def set_rol_members(id_grupo: int, lista_cambios: list[list[str, Rol]]):
-        if GroupController.get_rol_in_group(SessionManager.get_id_user()) != 'master':
+        if GroupController.get_rol_in_group(id_grupo) != 'master':
             return False, "No se tienen los permisos para realizar estos cambios."
         bad_responses = []
         for alias, rol in lista_cambios:
@@ -322,4 +324,35 @@ class GroupController:
             'response': response
         }
 
+    @staticmethod
+    def out_of_group(id_grupo, delete_all_tasks, alias_new_master:str=None):
 
+        id_new_master=UserServiceData.recover_id_user_for_alias(alias_new_master) if alias_new_master else None
+        try:
+            GroupServiceData.out_member_group_session_manager(id_grupo=id_grupo, new_master=id_new_master,
+                                                              delete_all_task=delete_all_tasks)
+            return {
+                'success': True,
+                'response': 'Saliste del grupo correctamente'
+            }
+        except Exception as E:
+            return {
+                'success': False,
+                'response': f'No se pudo salir del grupo. \n{E}'
+            }
+
+    @staticmethod
+    def expel_member(id_grupo, alias_usuario):
+        id_usuario = UserServiceData.recover_id_user_for_alias(alias_usuario)
+        try:
+            GroupServiceData.expel_member_group(id_grupo=id_grupo, id_usuario=id_usuario, delete_registers=False)
+            success = True
+            response = f"Se expulsó al usuario {alias_usuario} exitosamente."
+        except Exception as E:
+            success = False
+            response = f"No se pudo expulsar al usuario {alias_usuario}.\n{E}"
+
+        return {
+            'success': success,
+            'response': response
+        }

@@ -2,7 +2,6 @@
 Módulo para la gestión de grupos y sus relaciones con usuarios.
 """
 
-from types import NoneType
 
 from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol, Usuario, UsuarioTarea, Tarea
 from datetime import date
@@ -132,10 +131,10 @@ class GroupServiceData:
 
     @staticmethod
     def get_rol_in_group(id_usuario, id_grupo) -> Rol:
-        try:
-            return session.query(UsuarioGrupo.rol).filter_by(IDUsuario=id_usuario, IDGrupo=id_grupo).first()[0]
-        except NoneType:
-            return None
+        if not GroupServiceData.is_user_in_group(id_grupo=id_grupo, id_usuario=id_usuario):
+            raise Exception("No existe el usuario en el grupo")
+        return session.query(UsuarioGrupo.rol).filter_by(IDUsuario=id_usuario, IDGrupo=id_grupo).first()[0]
+
 
     @staticmethod
     def get_master_alias_of_group(id_grupo):
@@ -195,25 +194,39 @@ class GroupServiceData:
     @staticmethod
     def __delete_member_group(id_grupo, id_usuario, delete_all_task):
         relacion_grupo = session.query(UsuarioGrupo).filter_by(IDGrupo=id_grupo, IDUsuario=id_usuario).first()
-        relaciones_tareas = (session.query(UsuarioTarea).join(Tarea, Tarea.IDTarea == UsuarioTarea.IDTarea)
-                             .filter(UsuarioGrupo.IDGrupo == id_grupo, UsuarioGrupo.IDUsuario==id_usuario))
-        if not delete_all_task:
-            relaciones_tareas = relaciones_tareas.filter(Tarea.Fecha_programada > date.today())
 
-        relaciones_tareas=relaciones_tareas.all()
+        if delete_all_task:
+            relaciones_tareas = (session.query(UsuarioTarea).join(Tarea, Tarea.IDTarea == UsuarioTarea.IDTarea)
+                                 .filter(UsuarioTarea.IDGrupo == id_grupo, UsuarioTarea.IDUsuario==id_usuario).all())
+        else:
+            relaciones_tareas = (session.query(UsuarioTarea).join(Tarea, Tarea.IDTarea == UsuarioTarea.IDTarea)
+                                 .filter(UsuarioTarea.IDGrupo == id_grupo, UsuarioTarea.IDUsuario == id_usuario,
+                                Tarea.Fecha_programada > date.today()).all())
 
-        GroupServiceData.__delete_tareas_relacion(relaciones_tareas)
+
+
+
+        if relaciones_tareas:
+            GroupServiceData.__delete_tareas_relacion(relaciones_tareas)
 
         session.delete(relacion_grupo)
         session.commit()
 
     @staticmethod
+    def get_cant_members_group(id_grupo):
+        return len(session.query(1).filter(UsuarioGrupo.IDGrupo==id_grupo).all())
+
+    @staticmethod
     def out_member_group_session_manager(id_grupo, new_master: int = None, delete_all_task=False):
         id_usuario = SessionManager.get_id_user()
         if GroupServiceData.get_rol_in_group(id_usuario=id_usuario, id_grupo=id_grupo) == Rol.master:
-            if not new_master:
-                raise Exception("Como master:\nNo se puede salir del grupo sin antes elegir un nuevo master.")
-
+            if not new_master and GroupServiceData.get_cant_members_group(id_grupo) > 1:
+                raise Exception(ExceptionGroup,
+                                "Como master:\nNo se puede salir del grupo sin antes elegir un nuevo master.")
+            if new_master:
+                usuario_master = session.query(UsuarioGrupo).filter_by(IDGrupo=id_grupo, IDUsuario=new_master).first()
+                usuario_master.rol = Rol.master
+                session.commit()
         GroupServiceData.__delete_member_group(id_grupo=id_grupo, id_usuario=id_usuario,
                                                delete_all_task=delete_all_task)
 

@@ -1181,15 +1181,54 @@ class ManageGroupsView:
         tk.Button(actions_frame, text="Gestionar", font=("Helvetica", 9),
                   command=lambda id_g=group.get('id_grupo'): self.go_to_view_group(group_id=id_g)).pack(side='left',
                                                                                                         padx=2)
-        tk.Button(actions_frame, text="Salir", state='disabled', font=("Helvetica", 9), bg='#E74C3C', fg='white').pack(
-            side='left', padx=2)
+        tk.Button(actions_frame, text="Salir", font=("Helvetica", 9), bg='#E74C3C', fg='white',
+                  command=lambda g=group: self.leave_group_flow(g)).pack(side='left', padx=2)
+
+    def leave_group_flow(self, group_data: dict):
+        """ Inicia el flujo para salir de un grupo, diferenciando por rol. """
+        role = group_data.get('rol_usuario')
+        group_id = group_data.get('id_grupo')
+
+        if role == 'master':
+            # Si es master, necesita seleccionar un sucesor.
+            # Necesitamos obtener la lista completa de miembros para esto.
+            request = GroupController.get_data_to_view(id_grupo=group_id)
+            if not request['success']:
+                messagebox.showerror("Error",
+                                     f"No se pudo obtener la lista de miembros para el grupo '{group_data.get('nombre')}'.")
+                return
+            members = request['data'].get('miembros', [])
+            SelectNewMasterView(self.root, self, group_id, members)
+        else:
+            # Si no es master, solo necesita confirmar.
+            LeaveGroupConfirmationView(self.root, self, group_id)
 
     def setup_pagination_controls(self):
-        # ... (sin cambios)
-        pass
+        for widget in self.pagination_frame.winfo_children(): widget.destroy()
+        if not self.todos_los_grupos:
+            if hasattr(self, 'prev_button'):
+                self.prev_button.pack_forget()
+                self.page_label.pack_forget()
+                self.next_button.pack_forget()
+            return
+
+        self.pagination_frame.pack(fill='x', pady=(10, 0))  # Asegurarse de que sea visible
+        self.prev_button = tk.Button(self.pagination_frame, text="◀ Anterior", command=self.prev_page,
+                                     font=self.root.FONT_BUTTON, relief='flat', cursor="hand2")
+        self.prev_button.pack(side='left', padx=10)
+        self.page_label = tk.Label(self.pagination_frame, text="", font=("Helvetica", 12, "bold"),
+                                   bg=self.pagination_frame.cget('bg'))
+        self.page_label.pack(side='left', expand=True)
+        self.next_button = tk.Button(self.pagination_frame, text="Siguiente ▶", command=self.next_page,
+                                     font=self.root.FONT_BUTTON, relief='flat', cursor="hand2")
+        self.next_button.pack(side='right', padx=10)
+        self.update_pagination_controls()
 
     def update_pagination_controls(self):
-        # ... (sin cambios)
+        if not hasattr(self, 'page_label') or not self.page_label: return
+        self.page_label.config(text=f"Página {self.current_page} de {self.total_pages}")
+        self.prev_button.config(state='normal' if self.current_page > 1 else 'disabled')
+        self.next_button.config(state='normal' if self.current_page < self.total_pages else 'disabled')
         pass
 
     def next_page(self):
@@ -1299,29 +1338,62 @@ class ViewGroupDetailsView:
         member_frame = tk.Frame(parent, bg=self.root.COLOR_FRAME, pady=3, padx=5)
         member_frame.pack(fill='x')
 
-        tk.Label(member_frame, text=f"{alias}", font=("Helvetica", 11, "bold"), bg=member_frame.cget('bg')).pack(
-            side='left')
+        (tk.Label(member_frame, text=f"{alias}", font=("Helvetica", 11, "bold"), bg=member_frame.cget('bg')).
+         pack(side='left', expand=True, fill='x', anchor='w'))
 
-        # Contenedor para el widget de rol (Label o OptionMenu)
         role_widget_container = tk.Frame(member_frame, bg=member_frame.cget('bg'))
         role_widget_container.pack(side='left', padx=4)
-
         role_label = tk.Label(role_widget_container, text=f"({rol.name})", font=("Helvetica", 10),
                               bg=member_frame.cget('bg'))
         role_label.pack()
 
-        # Botón de edición de rol
-        edit_button = tk.Button(member_frame, text="Editar Rol", font=("Helvetica", 8),
-                                command=lambda a=alias: self.enable_role_editing(a))
+        widgets_for_alias = {
+            'frame': member_frame,
+            'role_container': role_widget_container
+        }
 
-        # El master puede editar a todos menos a otros masters y a sí mismo
-        can_edit = self.user_role == 'master' and rol != 'master' and alias != SessionController.get_alias_user()
-        edit_button.config(state='normal' if can_edit else 'disabled')
-        edit_button.pack(side='right')
+        actions_frame = tk.Frame(member_frame, bg=member_frame.cget('bg'))
+        actions_frame.pack(side='right')
 
-        # Guardar referencia a los widgets de este miembro
-        self.member_widgets[alias] = {'frame': member_frame, 'role_container': role_widget_container,
-                                      'edit_button': edit_button}
+        is_master_acting_on_other = self.user_role == 'master' and alias != SessionController.get_alias_user()
+
+        if is_master_acting_on_other:
+            expel_button = tk.Button(actions_frame, text="Expulsar", font=("Helvetica", 8), bg=self.root.COLOR_DANGER,
+                                     fg='white',
+                                     command=lambda a=alias: self.expel_member_flow(a))
+            expel_button.pack(side='right', padx=2)
+
+            if rol.name != 'master':
+                edit_button = tk.Button(actions_frame, text="Editar Rol", font=("Helvetica", 8),
+                                        command=lambda a=alias: self.enable_role_editing(a))
+                edit_button.pack(side='right', padx=2)
+                # Se añade el botón al diccionario específico de este miembro SOLO si se crea.
+                widgets_for_alias['edit_button'] = edit_button
+
+        # Se guarda el diccionario (que puede o no tener la clave 'edit_button') en el diccionario principal.
+        self.member_widgets[alias] = widgets_for_alias
+
+    def expel_member_flow(self, alias_to_expel: str):
+        if not messagebox.askyesno("Confirmar Expulsión",
+                                   f"¿Estás seguro de que deseas expulsar a '{alias_to_expel}' del grupo?"
+                                   f"\nEsta acción es irreversible.",
+                                   icon='warning'):
+            return
+
+        response = GroupController.expel_member(id_grupo=self.group_id, alias_usuario=alias_to_expel)
+
+        if response['success']:
+            messagebox.showinfo("Éxito", response['response'])
+            self.refresh_view()  # Recarga toda la vista para actualizar la lista de miembros
+        else:
+            messagebox.showerror("Error", response['response'])
+
+    def leave_group_flow(self):
+        """ Inicia el flujo para que el usuario actual salga de este grupo. """
+        if self.user_role == 'master':
+            SelectNewMasterView(self.root, self, self.group_id, self.members)
+        else:
+            LeaveGroupConfirmationView(self.root, self, self.group_id)
 
     def enable_role_editing(self, alias: str):
         widgets = self.member_widgets.get(alias)
@@ -1564,24 +1636,20 @@ class ViewGroupDetailsView:
         if self.current_task_page > 1: self.current_task_page -= 1; self.display_current_task_page()
 
     def create_footer_buttons(self, parent):
-        pack_info = {'side': 'right', 'padx': 5, 'ipady': 3, 'ipadx': 10}
-        self.root.create_button(container=parent, name='btnBackToGroups', funcion=self.go_to_manage_groups,
-                                text='← Volver', bg='#6C757D', pack_info=pack_info)
+        pack_info_right = {'side': 'right', 'padx': 5, 'ipady': 3, 'ipadx': 10}
+        pack_info_left = {'side': 'left', 'padx': 5, 'ipady': 3, 'ipadx': 10}
 
-        # El botón de editar grupo solo aparece si el usuario es 'master'
-        if self.user_role == 'master':
-            self.root.create_button(container=parent, name='btnEditGroup',
-                                    funcion=self.open_edit_group_window,  # Llama al nuevo método
-                                    text='Editar Grupo', bg='#5D6D7E', pack_info=pack_info)
-            self.root.create_button(container=parent, name='btnAddMember',
-                                    funcion=self.open_add_member_window,
-                                    text='Agregar Miembro', bg=self.root.COLOR_SUCCESS, pack_info=pack_info)
+        # Botones del lado derecho
+        self.root.create_button(container=parent, name='btnBackToGroups', funcion=self.go_to_manage_groups, text='← Volver a Grupos', bg='#6C757D', pack_info=pack_info_right)
+        self.root.create_button(container=parent, name='btnLeaveGroup', funcion=self.leave_group_flow, text='Salir del Grupo', bg=self.root.COLOR_DANGER, pack_info=pack_info_right)
 
         if self.user_role in ['master', 'editor']:
-            self.root.create_button(container=parent, name='btnCreateTaskForGroup',
-                                    funcion=self.open_create_task_window,
-                                    text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY,
-                                    pack_info=pack_info)
+            self.root.create_button(container=parent, name='btnCreateTaskForGroup', funcion=self.open_create_task_window, text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY, pack_info=pack_info_right)
+
+        if self.user_role == 'master':
+            self.root.create_button(container=parent, name='btnAddMember', funcion=self.open_add_member_window, text='Agregar Miembro', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_right)
+            self.root.create_button(container=parent, name='btnEditGroup', funcion=self.open_edit_group_window, text='Editar Grupo', bg='#5D6D7E', pack_info=pack_info_right)
+
 
     def go_to_manage_groups(self):
         ManageGroupsView(root=self.root)
@@ -2059,3 +2127,127 @@ class EditGroupView(Toplevel):
             self.destroy()
         else:
             messagebox.showerror("Error al Guardar", request['response'], parent=self)
+
+class LeaveGroupConfirmationView(Toplevel):
+    """
+    Diálogo para que un miembro (no master) confirme si desea salir
+    de un grupo y qué hacer con sus tareas.
+    """
+    def __init__(self, parent_root_view: 'RootView', parent_view, group_id: int):
+        super().__init__(parent_root_view.root)
+        self.root_view = parent_root_view
+        self.parent_view = parent_view
+        self.group_id = group_id
+        self.delete_tasks_var = tk.BooleanVar(value=False)
+
+        self.title("Confirmar Salida de Grupo")
+        self.config(bg=self.root_view.COLOR_BACKGROUND, padx=20, pady=20)
+        self.transient(self.root_view.root)
+        self.grab_set()
+
+        self.create_widgets()
+        self.root_view.center_window(self)
+
+    def create_widgets(self):
+        tk.Label(self, text="¿Estás seguro de que quieres salir del grupo?", font=self.root_view.FONT_LABEL,
+                 bg=self.cget('bg')).pack(pady=(0, 15))
+
+        tasks_frame = tk.Frame(self, bg=self.cget('bg'))
+        tasks_frame.pack(pady=5)
+        tk.Label(tasks_frame, text="Al salir, ¿qué hacemos con tus tareas en este grupo?",
+                 font=self.root_view.FONT_BODY, bg=self.cget('bg')).pack()
+        tk.Radiobutton(tasks_frame, text="Mantener mis tareas asignadas", variable=self.delete_tasks_var,
+                       value=False, bg=self.cget('bg')).pack(anchor='w')
+        tk.Radiobutton(tasks_frame, text="Eliminar todas mis tareas de este grupo", variable=self.delete_tasks_var,
+                       value=True, bg=self.cget('bg')).pack(anchor='w')
+
+        footer_frame = tk.Frame(self, bg=self.cget('bg'), pady=10)
+        footer_frame.pack(fill='x')
+        tk.Button(footer_frame, text="Sí, Salir del Grupo", command=self.confirm_leave, bg=self.root_view.COLOR_DANGER,
+                  fg='white').pack(side='left', expand=True, padx=5, ipady=3)
+        (tk.Button(footer_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').
+         pack(side='right', expand=True, padx=5, ipady=3))
+
+    def confirm_leave(self):
+        delete_tasks = self.delete_tasks_var.get()
+        # Se llama al controlador sin new_master, ya que este usuario no es master
+        response = GroupController.out_of_group(id_grupo=self.group_id, delete_all_tasks=delete_tasks)
+        if response['success']:
+            messagebox.showinfo("Éxito", response['response'], parent=self)
+            if isinstance(self.parent_view, ManageGroupsView):
+                self.parent_view.setup_groups_display()
+            elif isinstance(self.parent_view, ViewGroupDetailsView):
+                self.parent_view.go_to_manage_groups()
+            self.destroy()
+        else:
+            messagebox.showerror("Error", response['response'], parent=self)
+
+
+class SelectNewMasterView(Toplevel):
+    """
+    Diálogo para que un 'master' seleccione un sucesor antes de
+    salir de un grupo.
+    """
+    def __init__(self, parent_root_view: 'RootView', parent_view, group_id: int, members: list):
+        super().__init__(parent_root_view.root)
+        self.root_view = parent_root_view
+        self.parent_view = parent_view
+        self.group_id = group_id
+        # Filtra la lista de miembros para excluir al master actual
+        self.available_successors = [m['alias'] for m in members if m['rol'].name != 'master']
+        self.new_master_var = tk.StringVar()
+        self.delete_tasks_var = tk.BooleanVar(value=False)
+
+        self.title("Seleccionar Nuevo Master")
+        self.config(bg=self.root_view.COLOR_BACKGROUND, padx=20, pady=20)
+        self.transient(self.root_view.root)
+        self.grab_set()
+
+        self.create_widgets()
+        self.root_view.center_window(self)
+
+    def create_widgets(self):
+        tk.Label(self, text="Debes nombrar un nuevo Master para salir", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).pack(pady=(0, 10))
+
+        if not self.available_successors:
+            tk.Label(self, text="¡Advertencia! Eres el único miembro.\nSi sales, el grupo podría ser eliminado.", fg=self.root_view.COLOR_DANGER, bg=self.cget('bg')).pack(pady=5)
+        else:
+            tk.Label(self, text="Selecciona el nuevo Master:", font=self.root_view.FONT_BODY, bg=self.cget('bg')).pack(anchor='w')
+            combo = ttk.Combobox(self, textvariable=self.new_master_var, values=self.available_successors, state='readonly')
+            combo.pack(fill='x', pady=5)
+            combo.set("Seleccionar un miembro")
+
+        tasks_frame = tk.Frame(self, bg=self.cget('bg'))
+        tasks_frame.pack(pady=10)
+        tk.Label(tasks_frame, text="¿Qué hacemos con tus tareas en este grupo?", font=self.root_view.FONT_BODY, bg=self.cget('bg')).pack()
+        tk.Radiobutton(tasks_frame, text="Mantener mis tareas", variable=self.delete_tasks_var, value=False, bg=self.cget('bg')).pack(anchor='w')
+        tk.Radiobutton(tasks_frame, text="Eliminar mis tareas", variable=self.delete_tasks_var, value=True, bg=self.cget('bg')).pack(anchor='w')
+
+        footer_frame = tk.Frame(self, bg=self.cget('bg'), pady=10)
+        footer_frame.pack(fill='x')
+        tk.Button(footer_frame, text="Confirmar y Salir", command=self.confirm_leave_and_promote, bg=self.root_view.COLOR_DANGER, fg='white').pack(side='left', expand=True, padx=5, ipady=3)
+        tk.Button(footer_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').pack(side='right', expand=True, padx=5, ipady=3)
+
+    def confirm_leave_and_promote(self):
+        new_master_alias = self.new_master_var.get()
+        if self.available_successors and (not new_master_alias or new_master_alias == "Seleccionar un miembro"):
+            messagebox.showwarning("Selección Requerida", "Por favor, selecciona un nuevo master de la lista.", parent=self)
+            return
+
+        # Si no hay sucesores, se pasa None. De lo contrario, el alias seleccionado.
+        final_new_master = new_master_alias if self.available_successors else None
+        delete_tasks = self.delete_tasks_var.get()
+
+        response = GroupController.out_of_group(id_grupo=self.group_id, delete_all_tasks=delete_tasks,
+                                                alias_new_master=final_new_master)
+
+        if response['success']:
+            messagebox.showinfo("Éxito", response['response'], parent=self)
+            # Comprueba de qué tipo es la vista padre y actúa en consecuencia.
+            if isinstance(self.parent_view, ManageGroupsView):
+                self.parent_view.setup_groups_display()
+            elif isinstance(self.parent_view, ViewGroupDetailsView):
+                self.parent_view.go_to_manage_groups()
+            self.destroy()
+        else:
+            messagebox.showerror("Error", response['response'], parent=self)
