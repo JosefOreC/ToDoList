@@ -127,7 +127,7 @@ class GroupServiceData:
                 .filter(UsuarioGrupo.IDUsuario==id_usuario).all())
 
     @staticmethod
-    def get_rol_in_group(id_usuario, id_grupo):
+    def get_rol_in_group(id_usuario, id_grupo) -> Rol:
         try:
             return session.query(UsuarioGrupo.rol).filter_by(IDUsuario=id_usuario, IDGrupo=id_grupo).first()[0]
         except NoneType:

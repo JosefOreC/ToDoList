@@ -2,6 +2,7 @@
 
 
 """
+
 from sqlalchemy.exc import IntegrityError
 
 from src.controlador.task_controller import TaskController
@@ -292,4 +293,33 @@ class GroupController:
             'success': True if not bad_responses else False,
             'response': 'Se guardaron los cambios' if not bad_responses else bad_responses
         }
+
+    @staticmethod
+    def update_data_group(id_grupo, nombre: str = None, descripcion: str = None):
+
+        if GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user(), id_grupo=id_grupo) != Rol.master:
+            return {
+                'success': False,
+                'response': "No se tienen permisos para realizar esta acción."
+            }
+
+        if nombre is None and descripcion is None:
+            return {
+                'success': False,
+                'response': "No se hicieron cambios."
+            }
+
+        try:
+            GroupServiceData.update_group(id_grupo=id_grupo, nombre=nombre, descripcion=descripcion)
+            success = True
+            response = "Se guardaron los cambios."
+        except Exception as E:
+            success = False
+            response = f"No se pudieron guardar los cambios. \n{E}"
+
+        return {
+            'success': success,
+            'response': response
+        }
+
 
