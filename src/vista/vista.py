@@ -350,15 +350,21 @@ class MainView:
         date_control_frame = tk.Frame(title_frame, bg=title_frame.cget('bg'))
         date_control_frame.pack()
 
-        tk.Button(date_control_frame, text="◀", command=self.prev_day, relief='flat', font=("Helvetica", 14),
-                  bg=date_control_frame.cget('bg'), cursor="hand2").pack(side='left', padx=10)
+
+        self.btn_back_date = tk.Button(date_control_frame, text="◀", command=self.prev_day, relief='flat',
+                                       font=("Helvetica", 14), bg=date_control_frame.cget('bg'), cursor="hand2")
+        self.btn_back_date.pack(side='left', padx=10)
         self.date_display_label = tk.Label(date_control_frame, text="", font=("Helvetica", 12),
                                            bg=date_control_frame.cget('bg'))
         self.date_display_label.pack(side='left')
-        tk.Button(date_control_frame, text="▶", command=self.next_day, relief='flat', font=("Helvetica", 14),
-                  bg=date_control_frame.cget('bg'), cursor="hand2").pack(side='left', padx=10)
-        tk.Button(date_control_frame, text="📅", command=self.open_calendar, relief='flat', font=("Helvetica", 14),
-                  bg=date_control_frame.cget('bg'), cursor="hand2").pack(side='left', padx=10)
+        self.btn_next_date = tk.Button(date_control_frame, text="▶", command=self.next_day, relief='flat',
+                                       font=("Helvetica", 14), bg=date_control_frame.cget('bg'), cursor="hand2")
+        self.btn_next_date.pack(side='left', padx=10)
+
+        self.btn_calendar = tk.Button(date_control_frame, text="📅", command=self.open_calendar, relief='flat', font=("Helvetica", 14),
+                  bg=date_control_frame.cget('bg'), cursor="hand2")
+
+        self.btn_calendar.pack(side='left', padx=10)
 
         self.tasks_widgets_frame = tk.Frame(content_frame, bg=content_frame.cget('bg'))
         self.tasks_widgets_frame.pack(fill='both', expand=True)
@@ -372,12 +378,22 @@ class MainView:
         self.recuperar = 'archivadas'
         self.root.componentes.get('btnVerArchivados').config(text='Volver',
                                                              command=self.event_change_type_normal)
+
+        self.btn_calendar.pack_forget()
+        self.btn_back_date.pack_forget()
+        self.btn_next_date.pack_forget()
+        self.date_display_label.pack_forget()
+
         self.setup_task_display()
 
     def event_change_type_normal(self):
         self.recuperar = 'normal'
         self.root.componentes.get('btnVerArchivados').config(text='📂Archivados',
                                                              command=self.event_change_type_archivate)
+        self.btn_back_date.pack(side='left', padx=10)
+        self.date_display_label.pack(side='left', padx=10)
+        self.btn_next_date.pack(side='left', padx=10)
+        self.btn_calendar.pack(side='left', padx=10)
         self.setup_task_display()
 
     def setup_task_display(self):
@@ -403,7 +419,9 @@ class MainView:
     def update_date_labels(self):
         """Actualiza el título principal y la etiqueta de fecha."""
         hoy = datetime.date.today()
-        if self.current_date == hoy:
+        if self.recuperar == 'archivadas':
+            self.title_label.config(text="Tareas Archivadas")
+        elif self.current_date == hoy:
             self.title_label.config(text="Tareas para Hoy")
         else:
             self.title_label.config(text="Tareas para el")
