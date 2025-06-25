@@ -24,13 +24,15 @@ class Usuario(Base):
     Alias = Column(String(30), nullable=False)
     Estado = Column(Boolean, default=True)
     Password = Column(String(100))
+    # Pregunta y respuesta de recuperacion
+    Pregunta = Column(String(100), nullable=False)
+    Respuesta = Column(String(100), nullable=False)
 
     grupos_relacion = relationship('UsuarioGrupo', back_populates='usuario')
 
     grupos_master = relationship('Grupo', back_populates='master', foreign_keys='Grupo.IDMaster')
 
     usuario_tareas = relationship('UsuarioTarea', back_populates='usuario')
-
     __table_args__ = (
         UniqueConstraint('Alias', name='uq_alias_usuario'),
     )

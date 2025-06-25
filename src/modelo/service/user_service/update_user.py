@@ -33,6 +33,8 @@ class UpdateUser:
         if isinstance(usuario, int):
             self.__usuario = session.query(Usuario).filter_by(IDUsuario = usuario).first()
             return
+        if isinstance(usuario, str):
+            self.__usuario = session.query(Usuario).filter_by(Alias = usuario).first()
         self.__usuario = usuario
 
     @staticmethod
@@ -77,3 +79,4 @@ class UpdateUser:
         """
         new_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         self.__usuario.Password = new_password
+

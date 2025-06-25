@@ -72,7 +72,7 @@ class UserServiceData:
     def __get_all_users():
         return session.query(Usuario.Alias, Usuario.Nombres, Usuario.Apellidos, Usuario.Estado).all()
     @staticmethod
-    def update_user(usuario: str or Usuario, nombres=None, apellidos=None, alias = None, password= None):
+    def update_user(usuario: int or str or Usuario, nombres=None, apellidos=None, alias = None, password= None):
 
         update_data = UpdateUser(usuario)
         if nombres:
@@ -94,6 +94,19 @@ class UserServiceData:
         except Exception as E:
             session.rollback()
             raise Exception(E)
+
+    @staticmethod
+    def recover_basic_data_user(alias: str):
+        """
+        :param alias:
+        :return:
+        tupla con los datos basicos de los clientes (alias, pregunta, respuesta)
+        """
+
+        if not UserServiceData.is_user_with_alias_exits(alias):
+            raise Exception(f"El usuario '{alias}' no existe.")
+
+        return session.query(Usuario.Alias, Usuario.Pregunta, Usuario.Respuesta).filter_by(Alias=alias).first()
 
     @staticmethod
     def soft_delete_user(id_usuario):

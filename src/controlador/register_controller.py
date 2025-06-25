@@ -15,7 +15,7 @@ class RegisterUserController:
     """Controlador responsable del registro de nuevos usuarios."""
 
     @staticmethod
-    def register_user(nombres, apellidos, alias, password, confirm_password):
+    def register_user(nombres, apellidos, alias, password, confirm_password, pregunta, respuesta):
         """Registra un nuevo usuario luego de validar los datos ingresados.
 
         Args:
@@ -28,14 +28,17 @@ class RegisterUserController:
         Returns:
             tuple: (bool, str) indicando si el registro fue exitoso y un mensaje asociado.
         """
-        if not nombres or not apellidos or not alias or not password or not confirm_password:
+        if (not nombres or not apellidos or not alias or not password or not confirm_password
+                or not pregunta or not respuesta):
             return False, 'Tiene que rellenar todos los campos.'
 
         if password != confirm_password:
             return False, 'Las contraseñas no coinciden.'
-
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
+        hashed_respuesta = bcrypt.hashpw(respuesta.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
         usuario = Usuario(Nombres=nombres, Apellidos=apellidos,
-                          Alias=alias,Password=hashed_password)
+                          Alias=alias,Password=hashed_password, Pregunta=pregunta,
+                          respuesta=hashed_respuesta)
         return RegisterUser(usuario).register_user()

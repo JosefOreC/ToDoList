@@ -169,8 +169,10 @@ class RegisterUserView:
         self.root.create_label(container=main_frame, name='lblRegisterTitle', text='Crear Cuenta', font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
         form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         form_frame.pack()
-        labels_texts = ['Nombres:', 'Apellidos:', 'Alias:', 'Contraseña:', 'Confirmar Contraseña:']
-        inputs_names = ['inpNombreRegistro', 'inpApellidoRegistro', 'inpAliasRegistro', 'inpContraseñaRegistro', 'inpConfirmarContraseñaRegistro']
+        labels_texts = ['Nombres:', 'Apellidos:', 'Alias:', 'Contraseña:', 'Confirmar Contraseña:',
+                        'Pregunta de Seguridad:', 'Respuesta Secreta:']
+        inputs_names = ['inpNombreRegistro', 'inpApellidoRegistro', 'inpAliasRegistro', 'inpContraseñaRegistro',
+                        'inpConfirmarContraseñaRegistro', 'inpPreguntaRegistro', 'inpRespuestaRegistro']
         for i, text in enumerate(labels_texts):
             tk.Label(form_frame, text=text, font=self.root.FONT_LABEL, bg=form_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).grid(row=i, column=0, sticky='w', pady=5, padx=5)
             is_secret = 'Contraseña' in text
@@ -180,18 +182,24 @@ class RegisterUserView:
         self.root.create_button(container=main_frame, name='btnRegistrarUsuario', funcion=self.btn_registrar_usuario, text='Registrarse', bg=self.root.COLOR_SUCCESS)
         self.root.create_button(container=main_frame, name='btnRegresarLogin', funcion=self.go_to_login, text='Volver al Inicio', bg='#6C757D')
 
+
+
     def btn_registrar_usuario(self):
         nombres = self.root.componentes['inpNombreRegistro'].get()
         apellidos = self.root.componentes['inpApellidoRegistro'].get()
         alias = self.root.componentes['inpAliasRegistro'].get()
         password = self.root.componentes['inpContraseñaRegistro'].get()
         confirm_password = self.root.componentes['inpConfirmarContraseñaRegistro'].get()
+        pregunta = self.root.componentes['inpPreguntaRegistro'].get()
+        respuesta = self.root.componentes['inpRespuestaRegistro'].get()
         is_user_save, response = RegisterUserController.register_user(
             nombres=nombres,
             apellidos=apellidos,
             alias=alias,
             password=password,
-            confirm_password=confirm_password
+            confirm_password=confirm_password,
+            pregunta=pregunta,
+            respuesta=respuesta
         )
         if is_user_save:
             messagebox.showinfo(title="Registro Exitoso", message=response)

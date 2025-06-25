@@ -146,6 +146,14 @@ class DataFormat:
         return response
 
     @staticmethod
+    def convert_to_dict_basic_data_user(usuario_data: tuple):
+        return {
+            'alias': usuario_data[0],
+            'pregunta': usuario_data[1],
+            'respuesta':usuario_data[2]
+        }
+
+    @staticmethod
     def convert_to_dict_member_data_group(miembros: tuple or list)-> list[dict['alias', 'rol']]:
         response = []
         for alias, rol in miembros:
