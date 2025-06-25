@@ -1,21 +1,22 @@
 """
     vista
 """
+import calendar
+import datetime
 import tkinter as tk
-from tkinter import ttk
+from tkinter import Text
 from tkinter import Toplevel
 from tkinter import messagebox
-from tkinter import Text
-from src.controlador.login_controller import LoginController
-from src.controlador.session_controller import SessionController
+from tkinter import ttk
+
 from src.controlador.group_controller import GroupController, Rol
-from src.controlador.task_controller import TaskController
-from src.controlador.user_controller import UserController
-from src.controlador.register_controller import RegisterUserController
+from src.controlador.login_controller import LoginController
 from src.controlador.main_view_controller import MainViewController
 from src.controlador.recover_password_controller import RecoverPasswordController
-import datetime
-import calendar
+from src.controlador.register_controller import RegisterUserController
+from src.controlador.session_controller import SessionController
+from src.controlador.task_controller import TaskController
+from src.controlador.user_controller import UserController
 
 
 class RootView:
@@ -118,6 +119,7 @@ class RootView:
     def cerrar_ventana(self):
         self.root.destroy()
 
+
 class LoginInView:
     def __init__(self, root: RootView):
         self.root = root
@@ -133,12 +135,17 @@ class LoginInView:
         self.root.limpiar_componentes()
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
         main_frame.pack(expand=True)
-        self.root.create_label(container=main_frame, name='lblLoginTitle', text='Inicio de Sesión', font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
-        self.root.create_label(container=main_frame, name='lblAliasLogin', text='Alias de Usuario', font_style=self.root.FONT_LABEL, pack_info={'pady': (10, 0), 'anchor': 'w'})
+        self.root.create_label(container=main_frame, name='lblLoginTitle', text='Inicio de Sesión',
+                               font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
+        self.root.create_label(container=main_frame, name='lblAliasLogin', text='Alias de Usuario',
+                               font_style=self.root.FONT_LABEL, pack_info={'pady': (10, 0), 'anchor': 'w'})
         self.root.create_input(container=main_frame, name='alias')
-        self.root.create_label(container=main_frame, name='lblPasswordLogin', text='Contraseña', font_style=self.root.FONT_LABEL, pack_info={'pady': (10, 0), 'anchor': 'w'})
+        self.root.create_label(container=main_frame, name='lblPasswordLogin', text='Contraseña',
+                               font_style=self.root.FONT_LABEL, pack_info={'pady': (10, 0), 'anchor': 'w'})
         self.root.create_input(container=main_frame, name='password', secret=True)
-        self.root.create_button(container=main_frame, name='btnOcultarPassLogin', funcion=self.btn_mostrar_contrasena, text='Mostrar', bg='#6C757D', pack_info={'pady': 5, 'ipadx': 10, 'ipady': 2, 'anchor': 'e'})
+        self.root.create_button(container=main_frame, name='btnOcultarPassLogin', funcion=self.btn_mostrar_contrasena,
+                                text='Mostrar', bg='#6C757D',
+                                pack_info={'pady': 5, 'ipadx': 10, 'ipady': 2, 'anchor': 'e'})
         self.root.create_button(container=main_frame, name='btnLogin', funcion=self.btn_login, text='Ingresar')
 
         recovery_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
@@ -153,7 +160,8 @@ class LoginInView:
         btn_recovery.pack(side='left', padx=5)
 
         self.root.create_label(container=main_frame, name='lblGoToRegister', text='¿No tienes una cuenta?')
-        self.root.create_button(container=main_frame, name='btnRegistrase', funcion=self.go_to_register, text='Regístrate Aquí', bg=self.root.COLOR_SUCCESS)
+        self.root.create_button(container=main_frame, name='btnRegistrase', funcion=self.go_to_register,
+                                text='Regístrate Aquí', bg=self.root.COLOR_SUCCESS)
 
     def go_to_register(self):
         RegisterUserView(root=self.root)
@@ -173,6 +181,7 @@ class LoginInView:
         else:
             messagebox.showerror(title="Error de Inicio de Sesión", message=response)
 
+
 class RegisterUserView:
     def __init__(self, root: RootView):
         self.root = root
@@ -182,7 +191,8 @@ class RegisterUserView:
         self.root.limpiar_componentes()
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
         main_frame.pack(expand=True)
-        self.root.create_label(container=main_frame, name='lblRegisterTitle', text='Crear Cuenta', font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
+        self.root.create_label(container=main_frame, name='lblRegisterTitle', text='Crear Cuenta',
+                               font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
         form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         form_frame.pack()
         labels_texts = ['Nombres:', 'Apellidos:', 'Alias:', 'Contraseña:', 'Confirmar Contraseña:',
@@ -190,15 +200,17 @@ class RegisterUserView:
         inputs_names = ['inpNombreRegistro', 'inpApellidoRegistro', 'inpAliasRegistro', 'inpContraseñaRegistro',
                         'inpConfirmarContraseñaRegistro', 'inpPreguntaRegistro', 'inpRespuestaRegistro']
         for i, text in enumerate(labels_texts):
-            tk.Label(form_frame, text=text, font=self.root.FONT_LABEL, bg=form_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).grid(row=i, column=0, sticky='w', pady=5, padx=5)
+            tk.Label(form_frame, text=text, font=self.root.FONT_LABEL, bg=form_frame.cget('bg'),
+                     fg=self.root.COLOR_TEXT_DARK).grid(row=i, column=0, sticky='w', pady=5, padx=5)
             is_secret = 'Contraseña' in text
-            inp = tk.Entry(form_frame, show='•' if is_secret else '', font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND, fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
+            inp = tk.Entry(form_frame, show='•' if is_secret else '', font=self.root.FONT_BODY,
+                           bg=self.root.COLOR_BACKGROUND, fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
             inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5, ipady=4)
             self.root.componentes[inputs_names[i]] = inp
-        self.root.create_button(container=main_frame, name='btnRegistrarUsuario', funcion=self.btn_registrar_usuario, text='Registrarse', bg=self.root.COLOR_SUCCESS)
-        self.root.create_button(container=main_frame, name='btnRegresarLogin', funcion=self.go_to_login, text='Volver al Inicio', bg='#6C757D')
-
-
+        self.root.create_button(container=main_frame, name='btnRegistrarUsuario', funcion=self.btn_registrar_usuario,
+                                text='Registrarse', bg=self.root.COLOR_SUCCESS)
+        self.root.create_button(container=main_frame, name='btnRegresarLogin', funcion=self.go_to_login,
+                                text='Volver al Inicio', bg='#6C757D')
 
     def btn_registrar_usuario(self):
         nombres = self.root.componentes['inpNombreRegistro'].get()
@@ -288,7 +300,8 @@ class CalendarPicker(Toplevel):
                 if day != 0:
                     btn = tk.Button(self.calendar_frame, text=str(day), command=lambda d=day: self.select_date(d),
                                     relief='flat')
-                    if self.current_year == self.today.year and self.current_month == self.today.month and day == self.today.day:
+                    if (self.current_year == self.today.year and self.current_month == self.today.month
+                            and day == self.today.day):
                         btn.config(bg='#AED6F1', relief='solid', borderwidth=1)  # Resaltar hoy
                     btn.grid(row=r, column=c, padx=2, pady=2, ipadx=5, ipady=5)
 
@@ -323,8 +336,8 @@ class MainView:
         self.tasks_per_page = 5
         self.total_pages = 1
         self.recuperar = 'normal'
-        self.funcion_recover_task = {'normal': lambda:MainViewController.recover_task_for_date(self.current_date),
-                                     'archivadas':MainViewController.recover_task_archivade}
+        self.funcion_recover_task = {'normal': lambda: MainViewController.recover_task_for_date(self.current_date),
+                                     'archivadas': MainViewController.recover_task_archivade}
 
         # Widgets que necesitan ser referenciados
         self.title_label = None
@@ -335,8 +348,6 @@ class MainView:
         self.page_label = None
 
         self.create_main_interface()
-
-
 
     def create_main_interface(self):
         self.root.limpiar_componentes()
@@ -351,7 +362,8 @@ class MainView:
         self.root.create_button(container=header_frame, name='btnManageGroups', funcion=self.go_to_manage_groups,
                                 text='👥 Gestionar Grupos', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_btn)
 
-        self.root.create_button(container=header_frame, name='btnVerArchivados', funcion=self.event_change_type_archivate,
+        self.root.create_button(container=header_frame, name='btnVerArchivados',
+                                funcion=self.event_change_type_archivate,
                                 text='📂Archivados', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_btn)
 
         self.root.create_button(container=header_frame, name='btnMiPerfil', funcion=self.go_to_profile,
@@ -374,7 +386,6 @@ class MainView:
         date_control_frame = tk.Frame(title_frame, bg=title_frame.cget('bg'))
         date_control_frame.pack()
 
-
         self.btn_back_date = tk.Button(date_control_frame, text="◀", command=self.prev_day, relief='flat',
                                        font=("Helvetica", 14), bg=date_control_frame.cget('bg'), cursor="hand2")
         self.btn_back_date.pack(side='left', padx=10)
@@ -385,8 +396,9 @@ class MainView:
                                        font=("Helvetica", 14), bg=date_control_frame.cget('bg'), cursor="hand2")
         self.btn_next_date.pack(side='left', padx=10)
 
-        self.btn_calendar = tk.Button(date_control_frame, text="📅", command=self.open_calendar, relief='flat', font=("Helvetica", 14),
-                  bg=date_control_frame.cget('bg'), cursor="hand2")
+        self.btn_calendar = tk.Button(date_control_frame, text="📅", command=self.open_calendar, relief='flat',
+                                      font=("Helvetica", 14),
+                                      bg=date_control_frame.cget('bg'), cursor="hand2")
 
         self.btn_calendar.pack(side='left', padx=10)
 
@@ -540,7 +552,7 @@ class MainView:
             tk.Label(info_frame, text=f"Grupo: {tarea.get('grupo')}", font=("Helvetica", 10), bg=info_frame.cget('bg'),
                      fg='#566573', anchor='w').pack(fill='x', pady=(5, 0))
 
-        if self.recuperar=='archivadas':
+        if self.recuperar == 'archivadas':
             tk.Label(info_frame, text=f"Fecha: {tarea.get('fecha')}", font=("Helvetica", 10), bg=info_frame.cget('bg'),
                      fg='#566573', anchor='w').pack(fill='y', pady=(5, 0))
 
@@ -573,14 +585,13 @@ class MainView:
 
         btn_archive = tk.Button(actions_frame, text='Archivar' if not tarea.get('archivado') else 'Desarchivar'
                                 , bg='#5D6D7E' if not tarea.get('archivado') else
-                                self.root.COLOR_SUCCESS, fg=self.root.COLOR_TEXT_LIGHT,
+            self.root.COLOR_SUCCESS, fg=self.root.COLOR_TEXT_LIGHT,
                                 font=self.root.FONT_BUTTON, relief='flat',
                                 command=lambda id_t=task_id: (self.btn_archive_task(id_tarea=id_t)
-                                if not tarea.get('archivado')
-                                else self.btn_unarchivate_task(id_t)))
+                                                              if not tarea.get('archivado')
+                                                              else self.btn_unarchivate_task(id_t)))
         btn_archive.config(state='normal', cursor="hand2")
         btn_archive.pack(side='left', padx=2)
-
 
         if not can_delete:
             return
@@ -628,7 +639,8 @@ class MainView:
                 messagebox.showinfo(title="Tarea Archivada", message=response.get('response'))
                 self.setup_task_display()
             else:
-                messagebox.showerror(title="Error", message=f"No se pudo archivar la tarea:\n{response.get('response')}")
+                messagebox.showerror(title="Error", message=f"No se pudo archivar la tarea:"
+                                                            f"\n{response.get('response')}")
 
     def btn_unarchivate_task(self, id_tarea):
 
@@ -644,13 +656,13 @@ class MainView:
                 messagebox.showerror(title="Error",
                                      message=f"No se pudo desarchivar la tarea:\n{response.get('response')}")
 
-
     def btn_delete_task(self, id_tarea):
         task = self.find_task_by_id(id_tarea)
         if not task: return
 
         if messagebox.askyesno(title="Confirmar Eliminación",
-                               message=f"¡ADVERTENCIA!\n\n¿Estás seguro de que deseas eliminar la tarea:\n\n'{task.get('nombre')}'?\n\nEsta acción es definitiva.",
+                               message=f"¡ADVERTENCIA!\n\n¿Estás seguro de que deseas eliminar la tarea:"
+                                       f"\n\n'{task.get('nombre')}'?\n\nEsta acción es definitiva.",
                                icon='warning'):
             is_deleted, response = TaskController.event_delete_task(id_tarea=id_tarea)
             if is_deleted:
@@ -678,6 +690,7 @@ class MainView:
     def refresh_view(self):
         self.setup_task_display()
 
+
 class EditTaskView:
     def __init__(self, root: RootView, main_view, task_data: dict):
         self.root, self.main_view, self.task_data = root, main_view, task_data
@@ -693,20 +706,24 @@ class EditTaskView:
     def create_edit_form(self):
         outer_frame = tk.Frame(self.top, bg=self.root.COLOR_FRAME, padx=20, pady=20)
         outer_frame.pack(expand=True, fill='both')
-        tk.Label(outer_frame, text='Editar Tarea', font=self.root.FONT_TITLE, bg=outer_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).pack(pady=(0, 20))
+        tk.Label(outer_frame, text='Editar Tarea', font=self.root.FONT_TITLE, bg=outer_frame.cget('bg'),
+                 fg=self.root.COLOR_TEXT_DARK).pack(pady=(0, 20))
         form_frame = tk.Frame(outer_frame, bg=outer_frame.cget('bg'))
         form_frame.pack(fill='x')
         form_frame.grid_columnconfigure(1, weight=1)
         labels_texts = ['Nombre:', 'Fecha (dd-mm-aaaa):', 'Prioridad (1-5):', 'Detalle:']
         self.inputs = {}
         for i, text in enumerate(labels_texts):
-            tk.Label(form_frame, text=text, font=self.root.FONT_LABEL, bg=form_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).grid(row=i, column=0, sticky='nw', pady=5, padx=5)
+            tk.Label(form_frame, text=text, font=self.root.FONT_LABEL, bg=form_frame.cget('bg'),
+                     fg=self.root.COLOR_TEXT_DARK).grid(row=i, column=0, sticky='nw', pady=5, padx=5)
             key = text.split(' ')[0].lower().replace(':', '')
             if key == 'detalle':
-                inp = Text(form_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND, fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1, height=7, wrap=tk.WORD)
+                inp = Text(form_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND,
+                           fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1, height=7, wrap=tk.WORD)
                 inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5)
             else:
-                inp = tk.Entry(form_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND, fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
+                inp = tk.Entry(form_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND,
+                               fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
                 inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5, ipady=4)
             self.inputs[key] = inp
         self.inputs['nombre'].insert(0, self.task_data.get('nombre', ''))
@@ -715,8 +732,12 @@ class EditTaskView:
         self.inputs['detalle'].insert('1.0', self.task_data.get('detalle', ''))
         buttons_frame = tk.Frame(outer_frame, bg=outer_frame.cget('bg'))
         buttons_frame.pack(fill='x', pady=(20, 0))
-        tk.Button(buttons_frame, text="Guardar Cambios", command=self.save_changes, bg=self.root.COLOR_SUCCESS, fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat', cursor="hand2").pack(side='left', expand=True, padx=5, ipady=3)
-        tk.Button(buttons_frame, text="Cancelar", command=self.close_window, bg='#6C757D', fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat', cursor="hand2").pack(side='right', expand=True, padx=5, ipady=3)
+        (tk.Button(buttons_frame, text="Guardar Cambios", command=self.save_changes, bg=self.root.COLOR_SUCCESS,
+                   fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat', cursor="hand2")
+         .pack(side='left', expand=True, padx=5, ipady=3))
+        tk.Button(buttons_frame, text="Cancelar", command=self.close_window, bg='#6C757D',
+                  fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON,
+                  relief='flat', cursor="hand2").pack(side='right', expand=True, padx=5, ipady=3)
 
     def save_changes(self):
         update_payload = {
@@ -725,7 +746,8 @@ class EditTaskView:
             'prioridad': self.inputs['prioridad'].get(),
             'detalle': self.inputs['detalle'].get("1.0", tk.END).strip()
         }
-        is_updated, response = TaskController.event_edit_task_session_manager(id_tarea=self.task_data.get('id_tarea'), **update_payload)
+        is_updated, response = TaskController.event_edit_task_session_manager(id_tarea=self.task_data.get('id_tarea'),
+                                                                              **update_payload)
         if is_updated:
             messagebox.showinfo(title="Edición Exitosa", message=response)
             self.main_view.refresh_view()
@@ -736,6 +758,7 @@ class EditTaskView:
     def close_window(self):
         self.top.destroy()
 
+
 class GroupRegisterView:
     def __init__(self, root: RootView):
         self.root, self.miembros_alias = root, []
@@ -745,30 +768,43 @@ class GroupRegisterView:
         self.root.limpiar_componentes()
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
         main_frame.pack(expand=True, fill='both')
-        self.root.create_label(container=main_frame, name='lblGroupTitle', text='Registrar Nuevo Grupo', font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
+        self.root.create_label(container=main_frame, name='lblGroupTitle', text='Registrar Nuevo Grupo',
+                               font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
         form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         form_frame.pack(fill='x', pady=10)
-        self.root.create_label(container=form_frame, name='lblGroupName', text='Nombre del Grupo:', font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w'})
+        self.root.create_label(container=form_frame, name='lblGroupName', text='Nombre del Grupo:',
+                               font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w'})
         self.root.create_input(container=form_frame, name='inpGroupName')
-        self.root.create_label(container=form_frame, name='lblGroupDesc', text='Descripción (Opcional):', font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w', 'pady': (10, 0)})
+        self.root.create_label(container=form_frame, name='lblGroupDesc', text='Descripción (Opcional):',
+                               font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w', 'pady': (10, 0)})
         self.root.create_input(container=form_frame, name='inpGroupDesc')
         members_section = tk.Frame(main_frame, bg=main_frame.cget('bg'), pady=10)
         members_section.pack(fill='x', expand=True)
-        self.root.create_label(container=members_section, name='lblAddMemberTitle', text='Añadir Miembros (por alias):', font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w'})
+        self.root.create_label(container=members_section, name='lblAddMemberTitle', text='Añadir Miembros (por alias):',
+                               font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w'})
         add_member_input = tk.Frame(members_section, bg=members_section.cget('bg'))
         add_member_input.pack(fill='x')
-        inp_alias = tk.Entry(add_member_input, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND, fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
+        inp_alias = tk.Entry(add_member_input, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND,
+                             fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
         inp_alias.pack(side='left', fill='x', expand=True, ipady=4, pady=5, padx=(0, 10))
         self.root.componentes['inpMemberAlias'] = inp_alias
-        tk.Button(add_member_input, text="Añadir Miembro", command=self.btn_add_member, bg=self.root.COLOR_PRIMARY, fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat', cursor="hand2").pack(side='right', ipady=5, ipadx=10)
-        self.root.create_label(container=members_section, name='lblCurrentMembers', text='Miembros a Agregar:', font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w', 'pady': (10, 5)})
-        self.members_frame = tk.Frame(members_section, bg=self.root.COLOR_BACKGROUND, relief='solid', borderwidth=1, padx=10, pady=10)
+        (tk.Button(add_member_input, text="Añadir Miembro", command=self.btn_add_member, bg=self.root.COLOR_PRIMARY,
+                   fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat', cursor="hand2")
+         .pack(side='right', ipady=5, ipadx=10))
+        self.root.create_label(container=members_section, name='lblCurrentMembers', text='Miembros a Agregar:',
+                               font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w', 'pady': (10, 5)})
+        self.members_frame = tk.Frame(members_section, bg=self.root.COLOR_BACKGROUND, relief='solid',
+                                      borderwidth=1, padx=10, pady=10)
         self.members_frame.pack(fill='both', expand=True)
         self.update_members_display()
         action_buttons = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         action_buttons.pack(fill='x', pady=(20, 0))
-        self.root.create_button(container=action_buttons, name='btnRegisterGroup', funcion=self.btn_register_group, text='Guardar Grupo', bg=self.root.COLOR_SUCCESS, pack_info={'side': 'left', 'expand': True, 'padx': 5, 'ipady':3})
-        self.root.create_button(container=action_buttons, name='btnBackToMain', funcion=self.go_to_last_vista, text='Volver', bg='#6C757D', pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady':3})
+        self.root.create_button(container=action_buttons, name='btnRegisterGroup', funcion=self.btn_register_group,
+                                text='Guardar Grupo', bg=self.root.COLOR_SUCCESS,
+                                pack_info={'side': 'left', 'expand': True, 'padx': 5, 'ipady': 3})
+        self.root.create_button(container=action_buttons, name='btnBackToMain', funcion=self.go_to_last_vista,
+                                text='Volver', bg='#6C757D',
+                                pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady': 3})
 
     def btn_add_member(self):
         alias = self.root.componentes.get('inpMemberAlias').get().strip()
@@ -787,13 +823,17 @@ class GroupRegisterView:
     def update_members_display(self):
         for widget in self.members_frame.winfo_children(): widget.destroy()
         if not self.miembros_alias:
-            tk.Label(self.members_frame, text="No hay miembros agregados.", font=self.root.FONT_BODY, bg=self.members_frame.cget('bg'), fg='#6C757D').pack(pady=10)
+            tk.Label(self.members_frame, text="No hay miembros agregados.", font=self.root.FONT_BODY,
+                     bg=self.members_frame.cget('bg'), fg='#6C757D').pack(pady=10)
             return
         for alias in self.miembros_alias:
             item_frame = tk.Frame(self.members_frame, bg=self.members_frame.cget('bg'))
             item_frame.pack(fill='x', pady=2)
-            tk.Label(item_frame, text=f"• {alias}", font=self.root.FONT_BODY, bg=item_frame.cget('bg')).pack(side='left', padx=(0, 10))
-            tk.Button(item_frame, text="Quitar", command=lambda a=alias: self.remove_member(alias_to_remove=a), bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT, font=("Helvetica", 8, "bold"), relief='flat', cursor="hand2").pack(side='right')
+            (tk.Label(item_frame, text=f"• {alias}", font=self.root.FONT_BODY, bg=item_frame.cget('bg'))
+             .pack(side='left', padx=(0, 10)))
+            tk.Button(item_frame, text="Quitar", command=lambda a=alias: self.remove_member(alias_to_remove=a),
+                      bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT, font=("Helvetica", 8, "bold"),
+                      relief='flat', cursor="hand2").pack(side='right')
 
     def remove_member(self, alias_to_remove):
         if alias_to_remove in self.miembros_alias:
@@ -803,14 +843,17 @@ class GroupRegisterView:
     def btn_register_group(self):
         nombre = self.root.componentes.get('inpGroupName').get()
         descripcion = self.root.componentes.get('inpGroupDesc').get()
-        is_registered, response = GroupController.register_group(nombre=nombre, descripcion=descripcion, miembros_alias=self.miembros_alias)
+        is_registered, response = GroupController.register_group(nombre=nombre, descripcion=descripcion,
+                                                                 miembros_alias=self.miembros_alias)
         if is_registered:
             messagebox.showinfo(title="Grupo Registrado", message=response)
             self.go_to_last_vista()
         else:
             messagebox.showerror(title="Error de Registro de Grupo", message=response)
 
-    def go_to_last_vista(self): ManageGroupsView(root=self.root)
+    def go_to_last_vista(self):
+        ManageGroupsView(root=self.root)
+
 
 class ProfileView:
     def __init__(self, root: RootView):
@@ -821,26 +864,37 @@ class ProfileView:
         self.root.limpiar_componentes()
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=40, pady=40)
         main_frame.pack(expand=True, fill="both")
-        self.root.create_label(container=main_frame, name='lblProfileTitle', text='Actualizar Mi Perfil', font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
+        self.root.create_label(container=main_frame, name='lblProfileTitle', text='Actualizar Mi Perfil',
+                               font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 20)})
         form_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
         form_frame.pack(fill='x')
-        labels, names = ['Nombres:', 'Apellidos:', 'Alias:', 'Nueva Contraseña (opcional):'], ['inpNombres', 'inpApellidos', 'inpAlias', 'inpPassword']
+        labels, names = (['Nombres:', 'Apellidos:', 'Alias:', 'Nueva Contraseña (opcional):'],
+                         ['inpNombres', 'inpApellidos', 'inpAlias', 'inpPassword'])
         user_data = UserController.get_data_session_manager()
         for i, text in enumerate(labels):
-            self.root.create_label(container=form_frame, name=f'lbl{names[i]}', text=text, font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w', 'pady': (10, 0)})
-            inp = tk.Entry(form_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND, fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
-            if 'Nombres' in text: inp.insert(0, user_data.get('nombres', ''))
-            elif 'Apellidos' in text: inp.insert(0, user_data.get('apellidos', ''))
+            self.root.create_label(container=form_frame, name=f'lbl{names[i]}', text=text,
+                                   font_style=self.root.FONT_LABEL, pack_info={'anchor': 'w', 'pady': (10, 0)})
+            inp = tk.Entry(form_frame, font=self.root.FONT_BODY, bg=self.root.COLOR_BACKGROUND,
+                           fg=self.root.COLOR_TEXT_DARK, relief='solid', borderwidth=1)
+            if 'Nombres' in text:
+                inp.insert(0, user_data.get('nombres', ''))
+            elif 'Apellidos' in text:
+                inp.insert(0, user_data.get('apellidos', ''))
             elif 'Alias' in text:
                 inp.insert(0, user_data.get('alias', ''))
                 inp.config(state='readonly', fg='grey')
-            elif 'Contraseña' in text: inp.config(show='•')
+            elif 'Contraseña' in text:
+                inp.config(show='•')
             inp.pack(pady=5, ipady=4, fill='x')
             self.root.componentes[names[i]] = inp
         action_buttons = tk.Frame(main_frame, bg=main_frame.cget('bg'))
-        action_buttons.pack(fill='x', pady=(20,0))
-        self.root.create_button(container=action_buttons, name='btnUpdateUser', funcion=self.btn_update_user, text='Guardar Cambios', bg=self.root.COLOR_SUCCESS, pack_info={'side':'left', 'expand':True, 'padx':5, 'ipady':3})
-        self.root.create_button(container=action_buttons, name='btnBackToMainFromProfile', funcion=self.go_to_main, text='Volver', bg='#6C757D', pack_info={'side':'right', 'expand':True, 'padx':5, 'ipady':3})
+        action_buttons.pack(fill='x', pady=(20, 0))
+        self.root.create_button(container=action_buttons, name='btnUpdateUser', funcion=self.btn_update_user,
+                                text='Guardar Cambios', bg=self.root.COLOR_SUCCESS,
+                                pack_info={'side': 'left', 'expand': True, 'padx': 5, 'ipady': 3})
+        self.root.create_button(container=action_buttons, name='btnBackToMainFromProfile', funcion=self.go_to_main,
+                                text='Volver', bg='#6C757D',
+                                pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady': 3})
 
     def btn_update_user(self):
         nombres = self.root.componentes['inpNombres'].get()
@@ -859,16 +913,18 @@ class ProfileView:
         else:
             messagebox.showerror(title="Error al Actualizar", message=response)
 
-    def go_to_main(self): MainView(root=self.root)
+    def go_to_main(self):
+        MainView(root=self.root)
+
 
 class RegisterTareaUserView:
     def __init__(self, root: 'RootView'):
         self.root = root
         self.selected_group_id = None
-        self.current_user_alias = SessionController.get_alias_user() # Use SessionController
+        self.current_user_alias = SessionController.get_alias_user()  # Use SessionController
         self.master_alias_of_selected_group = None
         self.all_group_members_data = {}  # Stores {alias: rol}
-        self.members_to_assign = {} # {alias: {'var': BooleanVar, 'rol': str, 'is_fixed': bool}}
+        self.members_to_assign = {}  # {alias: {'var': BooleanVar, 'rol': str, 'is_fixed': bool}}
         self.member_display_frames = {}
         self.selected_date = datetime.date.today()
         self.date_display_label = None
@@ -877,13 +933,13 @@ class RegisterTareaUserView:
 
         self.create_fomulate_tarea()
 
-
     def create_fomulate_tarea(self):
         self.root.limpiar_componentes()
         outer_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=30, pady=30)
         outer_frame.pack(expand=True, fill='both')
 
-        self.root.create_label(outer_frame, name='lblCreateTaskTitle', text='Registrar Nueva Tarea', font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 15)})
+        self.root.create_label(outer_frame, name='lblCreateTaskTitle', text='Registrar Nueva Tarea',
+                               font_style=self.root.FONT_TITLE, pack_info={'pady': (0, 15)})
 
         # Main form content in a scrollable area
         canvas = tk.Canvas(outer_frame, bg=outer_frame.cget('bg'), highlightthickness=0)
@@ -900,7 +956,7 @@ class RegisterTareaUserView:
         # --- Content of the form goes into scrollable_form_frame ---
         form_content_frame = tk.Frame(scrollable_form_frame, bg=outer_frame.cget('bg'))
         form_content_frame.pack(expand=True, fill='x')
-        form_content_frame.grid_columnconfigure(1, weight=1) # Allow inputs to expand
+        form_content_frame.grid_columnconfigure(1, weight=1)  # Allow inputs to expand
 
         labels_texts = ['Nombre de la Tarea:', 'Fecha:', 'Prioridad (1-5):', 'Detalle:']
         inputs_names = ['inpNombreCreateTareaUser', 'inpFechaProgramadaCreateTareaUser', 'inpPrioridadCreateTarea',
@@ -927,17 +983,24 @@ class RegisterTareaUserView:
 
         # Group Selection
         row_idx = len(labels_texts)
-        tk.Label(form_content_frame, text='Pertenencia a Grupo:', font=self.root.FONT_LABEL, bg=form_content_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).grid(row=row_idx, column=0, sticky='w', pady=5, padx=5)
-        groups = GroupController.get_groups_editable() # Uses actual controller
-        self.group_options = {"Seleccionar Grupo": None}; self.group_options.update({name: id_ for id_, name in groups})
+        (tk.Label(form_content_frame, text='Pertenencia a Grupo:', font=self.root.FONT_LABEL,
+                  bg=form_content_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK)
+         .grid(row=row_idx, column=0, sticky='w', pady=5, padx=5))
+        groups = GroupController.get_groups_editable()  # Uses actual controller
+        self.group_options = {"Seleccionar Grupo": None};
+        self.group_options.update({name: id_ for id_, name in groups})
         self.group_combobox_var = tk.StringVar(value="Seleccionar Grupo")
-        group_combobox = ttk.Combobox(form_content_frame, textvariable=self.group_combobox_var, values=list(self.group_options.keys()), state='readonly', font=self.root.FONT_BODY, width=30)
-        group_combobox.grid(row=row_idx, column=1, sticky='ew', pady=5, padx=5, ipady=2); row_idx += 1
-        group_combobox.bind("<<ComboboxSelected>>", self.on_group_selected); self.root.componentes['cmbGroupSelection'] = group_combobox
+        group_combobox = ttk.Combobox(form_content_frame, textvariable=self.group_combobox_var,
+                                      values=list(self.group_options.keys()), state='readonly',
+                                      font=self.root.FONT_BODY, width=30)
+        group_combobox.grid(row=row_idx, column=1, sticky='ew', pady=5, padx=5, ipady=2);
+        row_idx += 1
+        group_combobox.bind("<<ComboboxSelected>>", self.on_group_selected)
+        self.root.componentes['cmbGroupSelection'] = group_combobox
 
         #
         self.check_type_frame = tk.Frame(form_content_frame, bg=form_content_frame.cget('bg'))
-        self.check_type_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10, 0));
+        self.check_type_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10, 0))
         row_idx += 1
         tk.Label(self.check_type_frame, text='Tipo de Check:', font=self.root.FONT_LABEL,
                  bg=self.check_type_frame.cget('bg')).pack(side='left', padx=5)
@@ -951,36 +1014,53 @@ class RegisterTareaUserView:
 
         # Assignment Type (Todos / Personalizado)
         self.assignment_frame = tk.Frame(form_content_frame, bg=form_content_frame.cget('bg'))
-        self.assignment_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10,0)); row_idx += 1
+        self.assignment_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=(10, 0));
+        row_idx += 1
         self.assignment_frame.grid_remove()
         self.assignment_type_var = tk.StringVar(value="todos")
-        tk.Radiobutton(self.assignment_frame, text="Asignar a Todos los Miembros", variable=self.assignment_type_var, value="todos", font=self.root.FONT_BODY, bg=self.assignment_frame.cget('bg'), command=self.on_assignment_type_changed, activebackground=self.assignment_frame.cget('bg')).pack(side='left', padx=5)
-        tk.Radiobutton(self.assignment_frame, text="Asignación Personalizada", variable=self.assignment_type_var, value="personalizado", font=self.root.FONT_BODY, bg=self.assignment_frame.cget('bg'), command=self.on_assignment_type_changed, activebackground=self.assignment_frame.cget('bg')).pack(side='left', padx=5)
+        (tk.Radiobutton(self.assignment_frame, text="Asignar a Todos los Miembros", variable=self.assignment_type_var,
+                        value="todos", font=self.root.FONT_BODY, bg=self.assignment_frame.cget('bg'),
+                        command=self.on_assignment_type_changed, activebackground=self.assignment_frame.cget('bg'))
+         .pack(side='left', padx=5))
+        tk.Radiobutton(self.assignment_frame, text="Asignación Personalizada",
+                       variable=self.assignment_type_var, value="personalizado",
+                       font=self.root.FONT_BODY, bg=self.assignment_frame.cget('bg'),
+                       command=self.on_assignment_type_changed,
+                       activebackground=self.assignment_frame.cget('bg')).pack(side='left', padx=5)
 
         # Member Selection (Personalizado)
         self.members_selection_frame = tk.Frame(form_content_frame, bg=form_content_frame.cget('bg'))
-        self.members_selection_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=5); row_idx += 1
+        self.members_selection_frame.grid(row=row_idx, column=0, columnspan=2, sticky='ew', pady=5);
+        row_idx += 1
         self.members_selection_frame.grid_remove()
-        self.members_selection_frame.grid_columnconfigure(1, weight=1) # Allow combobox to expand
+        self.members_selection_frame.grid_columnconfigure(1, weight=1)  # Allow combobox to expand
 
-        tk.Label(self.members_selection_frame, text='Añadir Miembro Específico:', font=self.root.FONT_LABEL, bg=self.members_selection_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK).grid(row=0, column=0, sticky='w', pady=(5,0), padx=5)
+        tk.Label(self.members_selection_frame, text='Añadir Miembro Específico:', font=self.root.FONT_LABEL,
+                 bg=self.members_selection_frame.cget('bg'),
+                 fg=self.root.COLOR_TEXT_DARK).grid(row=0, column=0, sticky='w', pady=(5, 0), padx=5)
         self.member_combobox_var = tk.StringVar()
-        self.member_combobox = ttk.Combobox(self.members_selection_frame, textvariable=self.member_combobox_var, state='readonly', font=self.root.FONT_BODY, width=28)
+        self.member_combobox = ttk.Combobox(self.members_selection_frame, textvariable=self.member_combobox_var,
+                                            state='readonly', font=self.root.FONT_BODY, width=28)
         self.member_combobox.grid(row=0, column=1, sticky='ew', pady=5, padx=5, ipady=2)
         self.member_combobox.bind("<<ComboboxSelected>>", self.add_selected_member_from_combobox)
         self.root.componentes['cmbMemberSelection'] = self.member_combobox
 
-        self.selected_members_display_frame = tk.Frame(self.members_selection_frame, bg=self.root.COLOR_BACKGROUND, relief="sunken", borderwidth=1, padx=5, pady=5)
-        self.selected_members_display_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', pady=(5,10), ipady=5)
+        self.selected_members_display_frame = tk.Frame(self.members_selection_frame, bg=self.root.COLOR_BACKGROUND,
+                                                       relief="sunken", borderwidth=1, padx=5, pady=5)
+        self.selected_members_display_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', pady=(5, 10), ipady=5)
         # self.members_selection_frame.grid_rowconfigure(1, weight=1) # Allow this to expand a bit
-
 
         # Action Buttons (outside scrollable area, directly in outer_frame)
         action_buttons_frame = tk.Frame(outer_frame, bg=outer_frame.cget('bg'))
-        action_buttons_frame.pack(pady=(15,0), fill='x')
-        self.root.create_button(action_buttons_frame, name='btnRegistrarTareaCreateTarea', text='Guardar Tarea', funcion=self.btn_registrar_tarea, bg=self.root.COLOR_SUCCESS, pack_info={'side': 'left', 'expand': True, 'padx': 5, 'ipady':3})
-        self.root.create_button(action_buttons_frame, name='btnVolverCreateTareaUser', text='Volver', funcion=self.btn_volver, bg='#6C757D', pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady':3})
-        self.lbl_task_response = self.root.create_label(outer_frame, 'lblTaskResponseCreate', '', pack_info={'pady': (10,0), 'fill':'x'})
+        action_buttons_frame.pack(pady=(15, 0), fill='x')
+        self.root.create_button(action_buttons_frame, name='btnRegistrarTareaCreateTarea', text='Guardar Tarea',
+                                funcion=self.btn_registrar_tarea, bg=self.root.COLOR_SUCCESS,
+                                pack_info={'side': 'left', 'expand': True, 'padx': 5, 'ipady': 3})
+        self.root.create_button(action_buttons_frame, name='btnVolverCreateTareaUser', text='Volver',
+                                funcion=self.btn_volver, bg='#6C757D',
+                                pack_info={'side': 'right', 'expand': True, 'padx': 5, 'ipady': 3})
+        self.lbl_task_response = self.root.create_label(outer_frame, 'lblTaskResponseCreate', '',
+                                                        pack_info={'pady': (10, 0), 'fill': 'x'})
         self.lbl_task_response.config(wraplength=400)
 
     def open_calendar(self):
@@ -999,14 +1079,14 @@ class RegisterTareaUserView:
 
         if self.selected_group_id:
             # Mostrar opciones de grupo
-            self.check_type_frame.grid() # Muestra la opción de tipo de check
+            self.check_type_frame.grid()  # Muestra la opción de tipo de check
             self.assignment_frame.grid()
             self.master_alias_of_selected_group = GroupController.get_group_master_alias(self.selected_group_id)
             self.load_group_members_data()
             self.on_assignment_type_changed()
         else:
             # Ocultar opciones de grupo
-            self.check_type_frame.grid_remove() # Oculta la opción de tipo de check
+            self.check_type_frame.grid_remove()  # Oculta la opción de tipo de check
             self.assignment_frame.grid_remove()
             self.members_selection_frame.grid_remove()
 
@@ -1036,7 +1116,8 @@ class RegisterTareaUserView:
     def load_group_members_data(self):
         self.all_group_members_data.clear()
         if self.selected_group_id:
-            members_with_roles = GroupController.get_all_members_with_rol(self.selected_group_id) # Uses actual controller
+            members_with_roles = GroupController.get_all_members_with_rol(
+                self.selected_group_id)  # Uses actual controller
             for alias, rol in members_with_roles: self.all_group_members_data[alias] = rol
 
     def update_member_combobox(self):
@@ -1044,8 +1125,10 @@ class RegisterTareaUserView:
         available_for_combobox = [f"{alias} ({rol})" for alias, rol in self.all_group_members_data.items()
                                   if alias not in self.members_to_assign]
         self.member_combobox['values'] = available_for_combobox
-        if available_for_combobox: self.member_combobox.set('Seleccionar para Añadir')
-        else: self.member_combobox.set('No más miembros'); self.member_combobox_var.set('')
+        if available_for_combobox:
+            self.member_combobox.set('Seleccionar para Añadir')
+        else:
+            self.member_combobox.set('No más miembros'); self.member_combobox_var.set('')
 
     def clear_members_display_and_assignment(self):
         for frame in self.member_display_frames.values():
@@ -1055,8 +1138,9 @@ class RegisterTareaUserView:
 
     def add_selected_member_from_combobox(self, event=None):
         selected_display_string = self.member_combobox_var.get()
-        if not selected_display_string or selected_display_string in ['Seleccionar para Añadir', 'No más miembros']: return
-        alias = selected_display_string.split(" (")[0] # Parse alias
+        if not selected_display_string or selected_display_string in ['Seleccionar para Añadir', 'No más miembros']:
+            return
+        alias = selected_display_string.split(" (")[0]  # Parse alias
         if alias and alias not in self.members_to_assign:
             self.add_member_to_assign_list(alias, True, is_fixed=False)
             self.update_member_combobox()
@@ -1073,18 +1157,23 @@ class RegisterTareaUserView:
         # self.root.comprobate_existe(member_frame_name) # Not needed if clearing display_frame children
 
         member_frame = tk.Frame(self.selected_members_display_frame, bg=self.root.COLOR_FRAME, padx=5, pady=2)
-        member_frame.pack(fill='x', pady=1) # Keep compact
-        self.member_display_frames[alias] = member_frame # For potential direct destruction
+        member_frame.pack(fill='x', pady=1)  # Keep compact
+        self.member_display_frames[alias] = member_frame  # For potential direct destruction
 
-        lbl_alias_rol = tk.Label(member_frame, text=f"{alias} ({rol})", font=self.root.FONT_BODY, bg=member_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK, anchor='w')
-        lbl_alias_rol.pack(side='left', padx=(0,10), fill='x', expand=True)
+        lbl_alias_rol = tk.Label(member_frame, text=f"{alias} ({rol})", font=self.root.FONT_BODY,
+                                 bg=member_frame.cget('bg'), fg=self.root.COLOR_TEXT_DARK, anchor='w')
+        lbl_alias_rol.pack(side='left', padx=(0, 10), fill='x', expand=True)
 
-        disponible_cb = tk.Checkbutton(member_frame, text="Disp.", variable=var, font=("Helvetica", 10), bg=member_frame.cget('bg'), activebackground=member_frame.cget('bg'))
+        disponible_cb = tk.Checkbutton(member_frame, text="Disp.", variable=var, font=("Helvetica", 10),
+                                       bg=member_frame.cget('bg'), activebackground=member_frame.cget('bg'))
         disponible_cb.pack(side='left', padx=5)
 
-        if is_fixed: var.set(True); disponible_cb.config(state='disabled')
+        if is_fixed:
+            var.set(True); disponible_cb.config(state='disabled')
         else:
-            btn_remove = tk.Button(member_frame, text="X", font=("Helvetica", 8, "bold"), width=2, bg=self.root.COLOR_DANGER, fg='white', relief='flat', command=lambda a=alias: self.remove_member_from_assign_list(a))
+            btn_remove = tk.Button(member_frame, text="X", font=("Helvetica", 8, "bold"), width=2,
+                                   bg=self.root.COLOR_DANGER, fg='white', relief='flat',
+                                   command=lambda a=alias: self.remove_member_from_assign_list(a))
             btn_remove.pack(side='right')
 
     def remove_member_from_assign_list(self, alias):
@@ -1099,25 +1188,28 @@ class RegisterTareaUserView:
         nombre = self.root.componentes.get('inpNombreCreateTareaUser').get()
         fecha = self.selected_date.strftime('%d-%m-%Y')
         prioridad_str = self.root.componentes.get('inpPrioridadCreateTarea').get()
-        detalle = self.root.componentes.get('inpDetalleCreateTarea').get("1.0", tk.END).strip() # From Text widget
-        self.lbl_task_response.config(text="") # Clear previous
+        detalle = self.root.componentes.get('inpDetalleCreateTarea').get("1.0", tk.END).strip()  # From Text widget
+        # Clear previous
 
-        if not all([nombre, fecha, prioridad_str]): # Detalle can be optional based on your rules
-            self.lbl_task_response.config(text='Nombre, Fecha y Prioridad son obligatorios.', fg=self.root.COLOR_DANGER)
+        if not all([nombre, fecha, prioridad_str]):  # Detalle can be optional based on your rules
+            messagebox.showerror(title="Error de datos", text='Nombre, Fecha y Prioridad son obligatorios.')
             return
         try:
             prioridad = int(prioridad_str)
             if not (1 <= prioridad <= 5): raise ValueError("Rango")
         except ValueError:
-            self.lbl_task_response.config(text='Prioridad debe ser un número entre 1 y 5.', fg=self.root.COLOR_DANGER)
+            messagebox.showerror(title='Error', text='Prioridad debe ser un número entre 1 y 5.')
             return
 
         miembros_a_asignar_final = 'all'
         if self.selected_group_id:
             if self.assignment_type_var.get() == "personalizado":
                 if not self.members_to_assign:
-                    self.lbl_task_response.config(text='Debe haber al menos un miembro asignado para tarea personalizada.', fg=self.root.COLOR_DANGER); return
-                miembros_a_asignar_final = [[alias, data['var'].get()] for alias, data in self.members_to_assign.items()]
+                    self.lbl_task_response.config(text='Debe haber al menos un miembro asignado para '
+                                                       'tarea personalizada.', fg=self.root.COLOR_DANGER);
+                    return
+                miembros_a_asignar_final = [[alias, data['var'].get()] for alias,
+                data in self.members_to_assign.items()]
 
             is_registered_task, response_msg = TaskController.event_register_task_group(
                 id_grupo=self.selected_group_id,
@@ -1129,19 +1221,29 @@ class RegisterTareaUserView:
                 miembros_disponible=miembros_a_asignar_final
             )
         else:
-            is_registered_task, response_msg = TaskController.event_register_task_user(nombre=nombre, fecha=fecha, prioridad=prioridad, detalle=detalle)
+            is_registered_task, response_msg = TaskController.event_register_task_user(nombre=nombre, fecha=fecha,
+                                                                                       prioridad=prioridad,
+                                                                                       detalle=detalle)
 
-        self.lbl_task_response.config(text=response_msg, fg=self.root.COLOR_SUCCESS if is_registered_task else self.root.COLOR_DANGER)
+        self.lbl_task_response.config(text=response_msg, fg=self.root.COLOR_SUCCESS if is_registered_task
+        else self.root.COLOR_DANGER)
         if is_registered_task:
             self.root.componentes.get('btnRegistrarTareaCreateTarea').config(state='disabled')
             # Assuming button exists in components dict (created by create_button)
             if 'btnAceptarRegistroCreateTarea' in self.root.componentes:
-                 if self.root.componentes['btnAceptarRegistroCreateTarea'].winfo_exists(): self.root.componentes['btnAceptarRegistroCreateTarea'].config(state='normal')
+                if self.root.componentes['btnAceptarRegistroCreateTarea'].winfo_exists():
+                    self.root.componentes['btnAceptarRegistroCreateTarea'].config(state='normal')
             else:
-                self.root.create_button(self.lbl_task_response.master, 'btnAceptarRegistroCreateTarea', text='Aceptar', funcion=self.btn_aceptar_crear_tarea, pack_info={'pady':(5,0)})
+                self.root.create_button(self.lbl_task_response.master, 'btnAceptarRegistroCreateTarea',
+                                        text='Aceptar', funcion=self.btn_aceptar_crear_tarea,
+                                        pack_info={'pady': (5, 0)})
 
-    def btn_volver(self): MainView(self.root)
-    def btn_aceptar_crear_tarea(self): MainView(self.root)
+    def btn_volver(self):
+        MainView(self.root)
+
+    def btn_aceptar_crear_tarea(self):
+        MainView(self.root)
+
 
 class ManageGroupsView:
     def __init__(self, root: 'RootView'):
@@ -1236,7 +1338,8 @@ class ManageGroupsView:
             request = GroupController.get_data_to_view(id_grupo=group_id)
             if not request['success']:
                 messagebox.showerror("Error",
-                                     f"No se pudo obtener la lista de miembros para el grupo '{group_data.get('nombre')}'.")
+                                     f"No se pudo obtener la lista de miembros para el grupo "
+                                     f"'{group_data.get('nombre')}'.")
                 return
             members = request['data'].get('miembros', [])
             SelectNewMasterView(self.root, self, group_id, members)
@@ -1309,7 +1412,8 @@ class ViewGroupDetailsView:
         self.tasks_widgets_frame, self.date_display_label = None, None
         self.current_date = datetime.date.today()
         self.all_tasks_for_date = []
-        self.task_pagination_frame, self.task_prev_button, self.task_next_button, self.task_page_label = None, None, None, None
+        self.task_pagination_frame, self.task_prev_button, self.task_next_button, self.task_page_label = (None, None,
+                                                                                                          None, None)
         self.current_task_page, self.tasks_per_page, self.total_task_pages = 1, 5, 1
 
         self.create_view_group_interface()
@@ -1454,7 +1558,8 @@ class ViewGroupDetailsView:
         # Asociar el cambio en el menú a nuestro manejador de cambios
         selected_role.trace("w", lambda *args: self.on_role_changed(alias, selected_role))
 
-        option_menu = ttk.OptionMenu(widgets['role_container'], selected_role, selected_role.get(), *role_options)
+        option_menu = ttk.OptionMenu(widgets['role_container'], selected_role, selected_role.get(),
+                                     *role_options)
         option_menu.pack()
 
         # Mostrar el botón de guardar si es la primera vez que se edita
@@ -1470,7 +1575,7 @@ class ViewGroupDetailsView:
         if not self.pending_role_changes:
             messagebox.showinfo("Sin cambios", "No se ha modificado ningún rol.")
             return
-        roles = {'miembro':Rol.miembro, 'editor': Rol.editor}
+        roles = {'miembro': Rol.miembro, 'editor': Rol.editor}
         lista_de_cambios = [[alias, roles.get(rol)] for alias, rol in self.pending_role_changes.items()]
 
         request = GroupController.set_rol_members(id_grupo=self.group_id, lista_cambios=lista_de_cambios)
@@ -1627,8 +1732,8 @@ class ViewGroupDetailsView:
                 self.setup_task_display()
 
             else:
-                messagebox.showerror(title="Error", message=f"No se pudo archivar la tarea:\n{response.get('response')}")
-
+                messagebox.showerror(title="Error",
+                                     message=f"No se pudo archivar la tarea:\n{response.get('response')}")
 
     def btn_unarchivate_task(self, id_tarea):
 
@@ -1643,7 +1748,6 @@ class ViewGroupDetailsView:
             else:
                 messagebox.showerror(title="Error",
                                      message=f"No se pudo desarchivar la tarea:\n{response.get('response')}")
-
 
     def setup_task_pagination_controls(self):
         for widget in self.task_pagination_frame.winfo_children(): widget.destroy()
@@ -1681,25 +1785,32 @@ class ViewGroupDetailsView:
         pack_info_left = {'side': 'left', 'padx': 5, 'ipady': 3, 'ipadx': 10}
 
         # Botones del lado derecho
-        self.root.create_button(container=parent, name='btnBackToGroups', funcion=self.go_to_manage_groups, text='← Volver a Grupos', bg='#6C757D', pack_info=pack_info_right)
-        self.root.create_button(container=parent, name='btnLeaveGroup', funcion=self.leave_group_flow, text='Salir del Grupo', bg=self.root.COLOR_DANGER, pack_info=pack_info_right)
+        self.root.create_button(container=parent, name='btnBackToGroups', funcion=self.go_to_manage_groups,
+                                text='← Volver a Grupos', bg='#6C757D', pack_info=pack_info_right)
+        self.root.create_button(container=parent, name='btnLeaveGroup', funcion=self.leave_group_flow,
+                                text='Salir del Grupo', bg=self.root.COLOR_DANGER, pack_info=pack_info_right)
 
         if self.user_role in ['master', 'editor']:
-            self.root.create_button(container=parent, name='btnCreateTaskForGroup', funcion=self.open_create_task_window, text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY, pack_info=pack_info_right)
+            self.root.create_button(container=parent, name='btnCreateTaskForGroup',
+                                    funcion=self.open_create_task_window, text='✚ Nueva Tarea',
+                                    bg=self.root.COLOR_PRIMARY, pack_info=pack_info_right)
 
         if self.user_role == 'master':
-            self.root.create_button(container=parent, name='btnAddMember', funcion=self.open_add_member_window, text='Agregar Miembro', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_right)
-            self.root.create_button(container=parent, name='btnEditGroup', funcion=self.open_edit_group_window, text='Editar Grupo', bg='#5D6D7E', pack_info=pack_info_right)
-
+            self.root.create_button(container=parent, name='btnAddMember', funcion=self.open_add_member_window,
+                                    text='Agregar Miembro', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_right)
+            self.root.create_button(container=parent, name='btnEditGroup', funcion=self.open_edit_group_window,
+                                    text='Editar Grupo', bg='#5D6D7E', pack_info=pack_info_right)
 
     def go_to_manage_groups(self):
         ManageGroupsView(root=self.root)
 
     def prev_day(self):
-        self.current_date -= datetime.timedelta(days=1); self.setup_task_display()
+        self.current_date -= datetime.timedelta(days=1);
+        self.setup_task_display()
 
     def next_day(self):
-        self.current_date += datetime.timedelta(days=1); self.setup_task_display()
+        self.current_date += datetime.timedelta(days=1);
+        self.setup_task_display()
 
     def open_calendar(self):
         CalendarPicker(parent=self.root.root, on_date_select_callback=self.on_date_selected)
@@ -1762,6 +1873,7 @@ class ViewGroupDetailsView:
             current_members=self.members
         )
 
+
 class AddMembersView(Toplevel):
     def __init__(self, parent_root_view: 'RootView', parent_view: 'ViewGroupDetailsView', group_id: int,
                  current_members: list):
@@ -1816,11 +1928,13 @@ class AddMembersView(Toplevel):
         if not alias: return
 
         if alias in self.members_to_add:
-            messagebox.showwarning("Duplicado", f"El usuario '{alias}' ya está en la lista para agregar.", parent=self)
+            messagebox.showwarning("Duplicado", f"El usuario '{alias}' ya está en la lista para agregar.",
+                                   parent=self)
             return
 
         if alias in self.current_members_aliases:
-            messagebox.showerror("Error", f"El usuario '{alias}' ya es miembro de este grupo.", parent=self)
+            messagebox.showerror("Error", f"El usuario '{alias}' ya es miembro de este grupo.",
+                                 parent=self)
             return
 
         is_valid, response = GroupController.is_user_exits(alias_usuario=alias)
@@ -2065,7 +2179,8 @@ class RegisterTaskForGroupView(Toplevel):
         is_valid, msg = TaskController.validar_datos(fecha=self.selected_date, prioridad=prioridad_str)
         if not nombre or not is_valid:
             messagebox.showerror("Datos Inválidos",
-                                 f"Por favor, corrige los errores:\n- El nombre es obligatorio.\n- {msg}", parent=self)
+                                 f"Por favor, corrige los errores:\n- El nombre es obligatorio.\n- {msg}",
+                                 parent=self)
             return
 
         fecha_str = self.selected_date.strftime('%d-%m-%Y')
@@ -2169,11 +2284,13 @@ class EditGroupView(Toplevel):
         else:
             messagebox.showerror("Error al Guardar", request['response'], parent=self)
 
+
 class LeaveGroupConfirmationView(Toplevel):
     """
     Diálogo para que un miembro (no master) confirme si desea salir
     de un grupo y qué hacer con sus tareas.
     """
+
     def __init__(self, parent_root_view: 'RootView', parent_view, group_id: int):
         super().__init__(parent_root_view.root)
         self.root_view = parent_root_view
@@ -2229,6 +2346,7 @@ class SelectNewMasterView(Toplevel):
     Diálogo para que un 'master' seleccione un sucesor antes de
     salir de un grupo.
     """
+
     def __init__(self, parent_root_view: 'RootView', parent_view, group_id: int, members: list):
         super().__init__(parent_root_view.root)
         self.root_view = parent_root_view
@@ -2248,31 +2366,43 @@ class SelectNewMasterView(Toplevel):
         self.root_view.center_window(self)
 
     def create_widgets(self):
-        tk.Label(self, text="Debes nombrar un nuevo Master para salir", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).pack(pady=(0, 10))
+        tk.Label(self, text="Debes nombrar un nuevo Master para salir", font=self.root_view.FONT_LABEL,
+                 bg=self.cget('bg')).pack(pady=(0, 10))
 
         if not self.available_successors:
-            tk.Label(self, text="¡Advertencia! Eres el único miembro.\nSi sales, el grupo podría ser eliminado.", fg=self.root_view.COLOR_DANGER, bg=self.cget('bg')).pack(pady=5)
+            tk.Label(self, text="¡Advertencia! Eres el único miembro.\nSi sales, el grupo podría ser eliminado.",
+                     fg=self.root_view.COLOR_DANGER, bg=self.cget('bg')).pack(pady=5)
         else:
-            tk.Label(self, text="Selecciona el nuevo Master:", font=self.root_view.FONT_BODY, bg=self.cget('bg')).pack(anchor='w')
-            combo = ttk.Combobox(self, textvariable=self.new_master_var, values=self.available_successors, state='readonly')
+            tk.Label(self, text="Selecciona el nuevo Master:", font=self.root_view.FONT_BODY, bg=self.cget('bg')).pack(
+                anchor='w')
+            combo = ttk.Combobox(self, textvariable=self.new_master_var, values=self.available_successors,
+                                 state='readonly')
             combo.pack(fill='x', pady=5)
             combo.set("Seleccionar un miembro")
 
         tasks_frame = tk.Frame(self, bg=self.cget('bg'))
         tasks_frame.pack(pady=10)
-        tk.Label(tasks_frame, text="¿Qué hacemos con tus tareas en este grupo?", font=self.root_view.FONT_BODY, bg=self.cget('bg')).pack()
-        tk.Radiobutton(tasks_frame, text="Mantener mis tareas", variable=self.delete_tasks_var, value=False, bg=self.cget('bg')).pack(anchor='w')
-        tk.Radiobutton(tasks_frame, text="Eliminar mis tareas", variable=self.delete_tasks_var, value=True, bg=self.cget('bg')).pack(anchor='w')
+        tk.Label(tasks_frame, text="¿Qué hacemos con tus tareas en este grupo?", font=self.root_view.FONT_BODY,
+                 bg=self.cget('bg')).pack()
+        tk.Radiobutton(tasks_frame, text="Mantener mis tareas", variable=self.delete_tasks_var, value=False,
+                       bg=self.cget('bg')).pack(anchor='w')
+        tk.Radiobutton(tasks_frame, text="Eliminar mis tareas", variable=self.delete_tasks_var, value=True,
+                       bg=self.cget('bg')).pack(anchor='w')
 
         footer_frame = tk.Frame(self, bg=self.cget('bg'), pady=10)
         footer_frame.pack(fill='x')
-        tk.Button(footer_frame, text="Confirmar y Salir", command=self.confirm_leave_and_promote, bg=self.root_view.COLOR_DANGER, fg='white').pack(side='left', expand=True, padx=5, ipady=3)
-        tk.Button(footer_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').pack(side='right', expand=True, padx=5, ipady=3)
+        tk.Button(footer_frame, text="Confirmar y Salir", command=self.confirm_leave_and_promote,
+                  bg=self.root_view.COLOR_DANGER, fg='white').pack(side='left', expand=True, padx=5, ipady=3)
+        tk.Button(footer_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').pack(side='right',
+                                                                                                      expand=True,
+                                                                                                      padx=5, ipady=3)
 
     def confirm_leave_and_promote(self):
         new_master_alias = self.new_master_var.get()
         if self.available_successors and (not new_master_alias or new_master_alias == "Seleccionar un miembro"):
-            messagebox.showwarning("Selección Requerida", "Por favor, selecciona un nuevo master de la lista.", parent=self)
+            messagebox.showwarning("Selección Requerida",
+                                   "Por favor, selecciona un nuevo master de la lista.",
+                                   parent=self)
             return
 
         # Si no hay sucesores, se pasa None. De lo contrario, el alias seleccionado.
@@ -2369,7 +2499,7 @@ class PasswordRecoveryStep2View(Toplevel):
                  borderwidth=1, wraplength=350, justify='left', padx=5, pady=5).pack(fill='x', ipady=4)
 
         tk.Label(self, text="Tu Respuesta:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).pack(pady=(10, 0),
-            anchor='w')
+                                                                                                      anchor='w')
         self.answer_entry = tk.Entry(self, font=self.root_view.FONT_BODY, show='•', width=40)
         self.answer_entry.pack(ipady=4, fill='x')
 
@@ -2402,6 +2532,7 @@ class PasswordRecoveryStep2View(Toplevel):
         else:
             # La respuesta fue incorrecta
             messagebox.showerror("Verificación Fallida", response_dict['data']['result'], parent=self)
+
 
 class PasswordRecoveryStep3View(Toplevel):
     """Paso 3: El usuario establece una nueva contraseña."""
