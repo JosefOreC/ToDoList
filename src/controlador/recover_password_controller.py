@@ -62,10 +62,8 @@ class RecoverPasswordController:
                 'response': "No se pueden dejar campos vacios."
             }
 
-
-
         try:
-            UserServiceData.update_user(usuario=RecoverPasswordController.__recuperacion.alias, password=new_password)
+            RecoverPasswordController.__recuperacion.change_password(password=new_password)
             success = True
             response = "Se cambió la contraseña."
         except Exception as E:

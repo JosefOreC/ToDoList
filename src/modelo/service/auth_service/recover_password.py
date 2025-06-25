@@ -4,7 +4,6 @@
 """
 
 import bcrypt
-from src.modelo.database_management.base.declarative_base import session
 from src.modelo.service.user_service.user_service_data import UserServiceData
 from src.modelo.service.data_service.data_format import DataFormat
 
@@ -21,3 +20,5 @@ class RecoverPassword:
     def is_answer_correct(self, answer):
         return bcrypt.checkpw(answer.encode('utf-8'), self.data_basic.get('respuesta').encode('utf-8'))
 
+    def change_password(self, password):
+        UserServiceData.update_user(self.alias, password=password)

@@ -35,6 +35,7 @@ class UpdateUser:
             return
         if isinstance(usuario, str):
             self.__usuario = session.query(Usuario).filter_by(Alias = usuario).first()
+            return
         self.__usuario = usuario
 
     @staticmethod

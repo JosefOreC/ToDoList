@@ -40,5 +40,5 @@ class RegisterUserController:
 
         usuario = Usuario(Nombres=nombres, Apellidos=apellidos,
                           Alias=alias,Password=hashed_password, Pregunta=pregunta,
-                          respuesta=hashed_respuesta)
+                          Respuesta=hashed_respuesta)
         return RegisterUser(usuario).register_user()

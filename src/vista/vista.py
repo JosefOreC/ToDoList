@@ -13,6 +13,7 @@ from src.controlador.task_controller import TaskController
 from src.controlador.user_controller import UserController
 from src.controlador.register_controller import RegisterUserController
 from src.controlador.main_view_controller import MainViewController
+from src.controlador.recover_password_controller import RecoverPasswordController
 import datetime
 import calendar
 
@@ -139,6 +140,18 @@ class LoginInView:
         self.root.create_input(container=main_frame, name='password', secret=True)
         self.root.create_button(container=main_frame, name='btnOcultarPassLogin', funcion=self.btn_mostrar_contrasena, text='Mostrar', bg='#6C757D', pack_info={'pady': 5, 'ipadx': 10, 'ipady': 2, 'anchor': 'e'})
         self.root.create_button(container=main_frame, name='btnLogin', funcion=self.btn_login, text='Ingresar')
+
+        recovery_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
+        recovery_frame.pack(fill='x', pady=5)
+
+        lbl_recovery = tk.Label(recovery_frame, text="¿Olvidaste tu contraseña?", bg=recovery_frame.cget('bg'))
+        lbl_recovery.pack(side='left')
+
+        btn_recovery = tk.Button(recovery_frame, text="Recuperar aquí", command=self.go_to_recovery,
+                                 font=("Helvetica", 10, "underline"), fg=self.root.COLOR_PRIMARY,
+                                 relief='flat', cursor="hand2", bg=recovery_frame.cget('bg'))
+        btn_recovery.pack(side='left', padx=5)
+
         self.root.create_label(container=main_frame, name='lblGoToRegister', text='¿No tienes una cuenta?')
         self.root.create_button(container=main_frame, name='btnRegistrase', funcion=self.go_to_register, text='Regístrate Aquí', bg=self.root.COLOR_SUCCESS)
 
@@ -147,6 +160,9 @@ class LoginInView:
 
     def btn_mostrar_contrasena(self):
         self.root.btn_cambiar_secret_input(name_input='password', name_button='btnOcultarPassLogin')
+
+    def go_to_recovery(self):
+        PasswordRecoveryStep1View(self.root, self)
 
     def btn_login(self):
         alias = self.root.componentes.get('alias').get()
@@ -627,7 +643,6 @@ class MainView:
             else:
                 messagebox.showerror(title="Error",
                                      message=f"No se pudo desarchivar la tarea:\n{response.get('response')}")
-
 
 
     def btn_delete_task(self, id_tarea):
@@ -2277,3 +2292,170 @@ class SelectNewMasterView(Toplevel):
             self.destroy()
         else:
             messagebox.showerror("Error", response['response'], parent=self)
+
+
+class PasswordRecoveryStep1View(Toplevel):
+    """Paso 1: El usuario introduce su alias."""
+
+    def __init__(self, root_view: 'RootView', parent_view: 'LoginInView'):
+        super().__init__(root_view.root)
+        self.root_view = root_view
+        self.parent_view = parent_view
+
+        self.title("Recuperar Contraseña - Paso 1")
+        self.config(bg=self.root_view.COLOR_BACKGROUND, padx=30, pady=20)
+        self.transient(root_view.root)
+        self.grab_set()
+        self.root_view.center_window(self)
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        tk.Label(self, text="Introduce tu Alias", font=self.root_view.FONT_TITLE, bg=self.cget('bg')).pack(pady=(0, 15))
+
+        tk.Label(self, text="Alias:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).pack(anchor='w')
+        self.alias_entry = tk.Entry(self, font=self.root_view.FONT_BODY, width=40)
+        self.alias_entry.pack(ipady=4, fill='x')
+        self.minsize(450, 250)
+        btn_frame = tk.Frame(self, bg=self.cget('bg'), pady=15)
+        btn_frame.pack(fill='x')
+        tk.Button(btn_frame, text="Continuar", command=self.verify_alias, bg=self.root_view.COLOR_PRIMARY,
+                  fg='white').pack(side='left', expand=True)
+        tk.Button(btn_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').pack(side='right',
+                                                                                                   expand=True)
+
+    def verify_alias(self):
+        alias = self.alias_entry.get().strip()
+        if not alias:
+            messagebox.showwarning("Campo Vacío", "Por favor, introduce tu alias.", parent=self)
+            return
+
+        # --- MODIFICADO: Se llama al nuevo controlador ---
+        response_dict = RecoverPasswordController.start_recover_password(alias)
+
+        if response_dict['success']:
+            pregunta = response_dict['data']['pregunta']
+            # Abre el paso 2, pasando el alias y la pregunta
+            PasswordRecoveryStep2View(self.root_view, self.parent_view, alias, pregunta)
+            self.destroy()
+        else:
+            messagebox.showerror("Error", response_dict['response'], parent=self)
+
+
+class PasswordRecoveryStep2View(Toplevel):
+    """Paso 2: El usuario responde a su pregunta de seguridad."""
+
+    def __init__(self, root_view: 'RootView', parent_view: 'LoginInView', alias: str, pregunta: str):
+        super().__init__(root_view.root)
+        self.root_view = root_view
+        self.parent_view = parent_view
+        self.alias = alias
+
+        self.title("Recuperar Contraseña - Paso 2")
+        self.config(bg=self.root_view.COLOR_BACKGROUND, padx=30, pady=20)
+        self.transient(root_view.root)
+        self.grab_set()
+        self.root_view.center_window(self)
+        self.minsize(450, 350)
+
+        self.create_widgets(pregunta)
+
+    def create_widgets(self, pregunta):
+        tk.Label(self, text="Responde tu Pregunta Secreta", font=self.root_view.FONT_TITLE, bg=self.cget('bg')).pack(
+            pady=(0, 15))
+
+        tk.Label(self, text="Pregunta:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).pack(anchor='w')
+        tk.Label(self, text=pregunta, font=self.root_view.FONT_BODY, bg=self.root_view.COLOR_FRAME, relief='solid',
+                 borderwidth=1, wraplength=350, justify='left', padx=5, pady=5).pack(fill='x', ipady=4)
+
+        tk.Label(self, text="Tu Respuesta:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).pack(pady=(10, 0),
+            anchor='w')
+        self.answer_entry = tk.Entry(self, font=self.root_view.FONT_BODY, show='•', width=40)
+        self.answer_entry.pack(ipady=4, fill='x')
+
+        btn_frame = tk.Frame(self, bg=self.cget('bg'), pady=15)
+        btn_frame.pack(fill='x')
+        tk.Button(btn_frame, text="Verificar", command=self.verify_answer, bg=self.root_view.COLOR_PRIMARY,
+                  fg='white').pack(side='left', expand=True)
+        tk.Button(btn_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').pack(side='right',
+                                                                                                   expand=True)
+
+    def verify_answer(self):
+        respuesta = self.answer_entry.get().strip()
+        if not respuesta:
+            messagebox.showwarning("Campo Vacío", "Por favor, introduce tu respuesta.", parent=self)
+            return
+
+        # --- MODIFICADO: Se llama al nuevo controlador y se maneja la respuesta anidada ---
+        response_dict = RecoverPasswordController.is_response_correct(respuesta)
+
+        # Primero, comprobar que la operación del controlador fue exitosa
+        if not response_dict['success']:
+            messagebox.showerror("Error del Sistema", response_dict['response'], parent=self)
+            return
+
+        # Si la operación fue exitosa, comprobar si la respuesta del usuario es correcta
+        if response_dict['data']['success']:
+            # Abre el paso 3 para restablecer la contraseña
+            PasswordRecoveryStep3View(self.root_view, self.parent_view, self.alias)
+            self.destroy()
+        else:
+            # La respuesta fue incorrecta
+            messagebox.showerror("Verificación Fallida", response_dict['data']['result'], parent=self)
+
+class PasswordRecoveryStep3View(Toplevel):
+    """Paso 3: El usuario establece una nueva contraseña."""
+
+    def __init__(self, root_view: 'RootView', parent_view: 'LoginInView', alias: str):
+        super().__init__(root_view.root)
+        self.root_view = root_view
+        self.parent_view = parent_view
+        self.alias = alias
+
+        self.title("Recuperar Contraseña - Paso 3")
+        self.config(bg=self.root_view.COLOR_BACKGROUND, padx=30, pady=20)
+        self.transient(root_view.root)
+        self.grab_set()
+        self.minsize(450, 250)
+        self.root_view.center_window(self)
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        tk.Label(self, text="Establece tu Nueva Contraseña", font=self.root_view.FONT_TITLE, bg=self.cget('bg')).pack(
+            pady=(0, 15))
+
+        tk.Label(self, text="Nueva Contraseña:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).pack(anchor='w')
+        self.new_pass_entry = tk.Entry(self, font=self.root_view.FONT_BODY, show='•', width=40)
+        self.new_pass_entry.pack(ipady=4, fill='x')
+
+        (tk.Label(self, text="Confirmar Nueva Contraseña:", font=self.root_view.FONT_LABEL, bg=self.cget('bg')).
+         pack(anchor='w', pady=(10, 0)))
+        self.confirm_pass_entry = tk.Entry(self, font=self.root_view.FONT_BODY, show='•', width=40)
+        self.confirm_pass_entry.pack(ipady=4, fill='x')
+
+        btn_frame = tk.Frame(self, bg=self.cget('bg'), pady=15)
+        btn_frame.pack(fill='x')
+        tk.Button(btn_frame, text="Guardar Contraseña", command=self.save_new_password, bg=self.root_view.COLOR_SUCCESS,
+                  fg='white').pack(side='left', expand=True)
+        tk.Button(btn_frame, text="Cancelar", command=self.destroy, bg='#6C757D', fg='white').pack(side='right',
+                                                                                                   expand=True)
+
+    def save_new_password(self):
+        new_pass = self.new_pass_entry.get()
+        confirm_pass = self.confirm_pass_entry.get()
+
+        # --- MODIFICADO: Se añade validación en la vista y se llama al nuevo controlador ---
+
+        # Es buena práctica validar esto en la vista para dar feedback inmediato.
+        if new_pass != confirm_pass:
+            messagebox.showerror("Error", "Las contraseñas no coinciden.", parent=self)
+            return
+
+        response_dict = RecoverPasswordController.change_password(new_pass, confirm_pass)
+
+        if response_dict['success']:
+            messagebox.showinfo("Éxito", response_dict['response'], parent=self)
+            self.destroy()
+        else:
+            messagebox.showerror("Error", response_dict['response'], parent=self)
