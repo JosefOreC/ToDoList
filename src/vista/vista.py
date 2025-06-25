@@ -1192,13 +1192,13 @@ class RegisterTareaUserView:
         # Clear previous
 
         if not all([nombre, fecha, prioridad_str]):  # Detalle can be optional based on your rules
-            messagebox.showerror(title="Error de datos", text='Nombre, Fecha y Prioridad son obligatorios.')
+            messagebox.showerror(title="Error de datos", message='Nombre, Fecha y Prioridad son obligatorios.')
             return
         try:
             prioridad = int(prioridad_str)
             if not (1 <= prioridad <= 5): raise ValueError("Rango")
         except ValueError:
-            messagebox.showerror(title='Error', text='Prioridad debe ser un número entre 1 y 5.')
+            messagebox.showerror(title='Error', message='Prioridad debe ser un número entre 1 y 5.')
             return
 
         miembros_a_asignar_final = 'all'
@@ -1225,23 +1225,14 @@ class RegisterTareaUserView:
                                                                                        prioridad=prioridad,
                                                                                        detalle=detalle)
 
-        self.lbl_task_response.config(text=response_msg, fg=self.root.COLOR_SUCCESS if is_registered_task
-        else self.root.COLOR_DANGER)
         if is_registered_task:
             self.root.componentes.get('btnRegistrarTareaCreateTarea').config(state='disabled')
-            # Assuming button exists in components dict (created by create_button)
-            if 'btnAceptarRegistroCreateTarea' in self.root.componentes:
-                if self.root.componentes['btnAceptarRegistroCreateTarea'].winfo_exists():
-                    self.root.componentes['btnAceptarRegistroCreateTarea'].config(state='normal')
-            else:
-                self.root.create_button(self.lbl_task_response.master, 'btnAceptarRegistroCreateTarea',
-                                        text='Aceptar', funcion=self.btn_aceptar_crear_tarea,
-                                        pack_info={'pady': (5, 0)})
-
-    def btn_volver(self):
+            messagebox.showinfo(title='Tarea Creada', message=response_msg)
+        else:
+            messagebox.showerror(title='Error', message=response_msg)
         MainView(self.root)
 
-    def btn_aceptar_crear_tarea(self):
+    def btn_volver(self):
         MainView(self.root)
 
 
