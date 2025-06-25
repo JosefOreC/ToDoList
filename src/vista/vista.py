@@ -17,6 +17,8 @@ from src.controlador.register_controller import RegisterUserController
 from src.controlador.session_controller import SessionController
 from src.controlador.task_controller import TaskController
 from src.controlador.user_controller import UserController
+from src.controlador.task_finder_controller import TaskFinderController
+from src.controlador.group_finder_controller import GroupFinderController
 
 
 class RootView:
@@ -349,6 +351,7 @@ class MainView:
 
         self.create_main_interface()
 
+
     def create_main_interface(self):
         self.root.limpiar_componentes()
         header_frame = tk.Frame(self.root.root, bg=self.root.COLOR_FRAME, padx=20, pady=10)
@@ -359,6 +362,8 @@ class MainView:
                                 text='Refrescar 🔄', bg='#17A2B8', pack_info=pack_info_btn)
         self.root.create_button(container=header_frame, name='btnCrearTarea', funcion=self.go_to_create_tarea,
                                 text='✚ Nueva Tarea', bg=self.root.COLOR_PRIMARY, pack_info=pack_info_btn)
+        self.root.create_button(container=header_frame, name='btnSearchTasks', funcion=self.go_to_task_search,
+                                text='🔍 Buscar Tareas', bg='#FDAB2A', pack_info=pack_info_btn)
         self.root.create_button(container=header_frame, name='btnManageGroups', funcion=self.go_to_manage_groups,
                                 text='👥 Gestionar Grupos', bg=self.root.COLOR_SUCCESS, pack_info=pack_info_btn)
 
@@ -409,6 +414,9 @@ class MainView:
         self.pagination_frame.pack(fill='x', pady=(10, 0))
 
         self.setup_task_display()
+
+    def go_to_task_search(self):
+        TaskSearchView(root=self.root)
 
     def event_change_type_archivate(self):
         self.recuperar = 'archivadas'
@@ -2581,3 +2589,303 @@ class PasswordRecoveryStep3View(Toplevel):
             self.destroy()
         else:
             messagebox.showerror("Error", response_dict['response'], parent=self)
+
+
+class TaskSearchView:
+    """
+    Vista dedicada a la búsqueda y filtrado de tareas con una disposición
+    de filtros en la parte superior y resultados en la parte inferior.
+    """
+
+    def __init__(self, root: 'RootView'):
+        self.root = root
+        self.root.limpiar_componentes()
+
+        # --- Atributos de estado para los filtros ---
+        self.name_var = tk.StringVar()
+        self.start_date = None
+        self.end_date = None
+        self.status_var = tk.StringVar(value="Todos")
+        self.group_var = tk.StringVar()
+        self.archived_var = tk.StringVar(value="Activas")  # Corregido a StringVar
+        self.group_id_map = {}
+
+        # --- Atributos para resultados y paginación ---
+        self.search_results = []
+        self.current_page = 1
+        self.tasks_per_page = 10
+        self.total_pages = 1
+
+        # --- Widgets referenciados ---
+        self.start_date_label = None
+        self.end_date_label = None
+        self.results_frame = None
+        self.pagination_frame = None
+        self.page_label = None
+
+        self.create_search_interface()
+        self.set_default_dates()
+        self.update_group_suggestions()  # Carga inicial de grupos
+        self.execute_search()
+
+    def create_search_interface(self):
+        # --- Contenedor principal para la nueva disposición ---
+        main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_BACKGROUND)
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+
+        # 1. Panel de Filtros (Arriba)
+        filters_container = tk.Frame(main_frame, bg=self.root.COLOR_FRAME, padx=15, pady=15)
+        filters_container.pack(side='top', fill='x', pady=(0, 10))
+        self.create_filters_frame(filters_container)
+
+        # 2. Panel de Resultados (Abajo)
+        results_container = tk.Frame(main_frame, bg=self.root.COLOR_BACKGROUND)
+        results_container.pack(side='top', fill='both', expand=True)
+        self.create_results_frame(results_container)
+
+    def create_filters_frame(self, parent):
+        tk.Label(parent, text="Filtros de Búsqueda", font=self.root.FONT_TITLE, bg=parent.cget('bg')).pack(pady=(0, 15),
+                                                                                                           anchor='w')
+
+        # Frame para alinear los filtros horizontalmente
+        filters_row = tk.Frame(parent, bg=parent.cget('bg'))
+        filters_row.pack(fill='x')
+
+        # --- Creación de cada sección de filtro ---
+        self.create_name_filter(filters_row)
+        self.create_date_filter(filters_row, "Desde:", 'start')
+        self.create_date_filter(filters_row, "Hasta:", 'end')
+        self.create_status_filter(filters_row)
+        self.create_group_filter(filters_row)
+        self.create_archived_filter(filters_row)
+
+        # --- Botones de acción ---
+        action_frame = tk.Frame(parent, bg=parent.cget('bg'))
+        action_frame.pack(fill='x', pady=(15, 0))
+        tk.Button(action_frame, text="Buscar Tareas", command=self.execute_search, bg=self.root.COLOR_PRIMARY,
+                  fg='white', font=self.root.FONT_BUTTON).pack(side='left', ipady=5, ipadx=20)
+        tk.Button(action_frame, text="Volver al Inicio", command=self.go_to_main, bg='#6C757D', fg='white',
+                  font=self.root.FONT_BUTTON).pack(side='right', ipady=5, ipadx=20)
+
+    # --- Métodos para crear cada sección de filtro ---
+
+    def create_name_filter(self, parent):
+        frame = tk.Frame(parent, bg=parent.cget('bg'))
+        frame.pack(side='left', padx=10, anchor='n')
+        tk.Label(frame, text="Nombre Tarea", font=self.root.FONT_LABEL, bg=frame.cget('bg')).pack(anchor='w')
+        tk.Entry(frame, textvariable=self.name_var, font=self.root.FONT_BODY, width=20).pack()
+
+    def create_date_filter(self, parent, label_text, target):
+        frame = tk.Frame(parent, bg=parent.cget('bg'))
+        frame.pack(side='left', padx=10, anchor='n')
+        tk.Label(frame, text=label_text, font=self.root.FONT_LABEL, bg=frame.cget('bg')).pack(anchor='w')
+
+        date_widget_frame = tk.Frame(frame, bg=frame.cget('bg'))
+        date_widget_frame.pack()
+
+        date_label = tk.Label(date_widget_frame, text="--/--/----", font=self.root.FONT_BODY, bg='white',
+                              relief='solid', borderwidth=1, padx=5)
+        date_label.pack(side='left')
+        tk.Button(date_widget_frame, text="📅", command=lambda t=target: self.open_calendar(t), relief='flat').pack(
+            side='left')
+        tk.Button(date_widget_frame, text="X", command=lambda t=target: self.clear_date(t), font=("Helvetica", 7),
+                  bg='#E74C3C', fg='white', relief='flat').pack(side='left', padx=2)
+
+        if target == 'start':
+            self.start_date_label = date_label
+        else:
+            self.end_date_label = date_label
+
+    def create_status_filter(self, parent):
+        frame = tk.Frame(parent, bg=parent.cget('bg'))
+        frame.pack(side='left', padx=10, anchor='n')
+        tk.Label(frame, text="Estado", font=self.root.FONT_LABEL, bg=frame.cget('bg')).pack(anchor='w')
+        ttk.Combobox(frame, textvariable=self.status_var, values=["Todos", "Realizado", "No Realizado"],
+                     state="readonly", font=self.root.FONT_BODY, width=15).pack()
+
+    def create_group_filter(self, parent):
+        frame = tk.Frame(parent, bg=parent.cget('bg'))
+        frame.pack(side='left', padx=10, anchor='n')
+        tk.Label(frame, text="Grupo", font=self.root.FONT_LABEL, bg=frame.cget('bg')).pack(anchor='w')
+        self.group_combobox = ttk.Combobox(frame, textvariable=self.group_var, font=self.root.FONT_BODY, width=20)
+        self.group_combobox.pack()
+        self.group_combobox.bind('<KeyRelease>', self.update_group_suggestions)
+
+    def create_archived_filter(self, parent):
+        frame = tk.Frame(parent, bg=parent.cget('bg'))
+        frame.pack(side='left', padx=10, anchor='n')
+        tk.Label(frame, text="Visibilidad", font=self.root.FONT_LABEL, bg=frame.cget('bg')).pack(anchor='w')
+        ttk.Combobox(frame, textvariable=self.archived_var, values=["Activas", "Archivadas"], state="readonly",
+                     font=self.root.FONT_BODY, width=15).pack()
+
+    # --- Lógica de Filtros y Búsqueda ---
+    def set_default_dates(self):
+        today = datetime.date.today()
+        self.start_date = today
+        self.end_date = today
+        self.start_date_label.config(text=today.strftime('%d-%m-%Y'))
+        self.end_date_label.config(text=today.strftime('%d-%m-%Y'))
+
+    def update_group_suggestions(self, event=None):
+        typed_text = self.group_var.get()
+        response = GroupFinderController.recover_group(nombre=typed_text)
+        if response['success'] and response['data']['grupos']:
+            grupos = response['data']['grupos']
+            self.group_id_map = {g['nombre']: g['id_grupo'] for g in grupos}
+            self.group_combobox['values'] = list(self.group_id_map.keys())
+        else:
+            self.group_id_map = {}
+            self.group_combobox['values'] = []
+
+    def execute_search(self):
+        # 1. Recopilar y limpiar todos los filtros
+        nombre = self.name_var.get().strip() or None
+
+        status_map = {"Todos": None, "Realizado": True, "No Realizado": False}
+        realizado = status_map.get(self.status_var.get())
+
+        selected_group_name = self.group_var.get().strip()
+        id_grupo = self.group_id_map.get(selected_group_name) if selected_group_name else None
+
+        archivado = True if self.archived_var.get() == "Archivadas" else False
+
+        # 2. Llamar al controlador con los argumentos correctos
+        response = TaskFinderController.recover_task(
+            nombre=nombre,
+            fecha_ini=self.start_date,
+            fecha_fin=self.end_date,
+            realizado=realizado,
+            id_grupo=id_grupo,
+            archivado=archivado
+        )
+
+        # 3. Procesar resultados
+        if response['success']:
+            self.search_results = response['data'].get('tareas') or []
+        else:
+            messagebox.showerror("Error de Búsqueda", response['response'])
+            self.search_results = []
+
+        # 4. Refrescar la vista de resultados
+        self.current_page = 1
+        self.total_pages = (len(self.search_results) + self.tasks_per_page - 1) // self.tasks_per_page or 1
+
+        self.display_current_page()
+        self.setup_pagination_controls()
+
+    # ... (El resto de los métodos como create_results_frame, insert_task_card y la paginación no necesitan cambios mayores y se mantienen de la implementación anterior, pero se incluyen aquí para que la clase esté completa)
+
+    def create_results_frame(self, parent):
+        tk.Label(parent, text="Resultados", font=("Helvetica", 16, "bold"), bg=parent.cget('bg')).pack(pady=(10, 10),
+                                                                                                       anchor='w')
+
+        canvas = tk.Canvas(parent, bg=self.root.COLOR_BACKGROUND, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        self.results_frame = tk.Frame(canvas, bg=self.root.COLOR_BACKGROUND)
+
+        self.results_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=self.results_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.pagination_frame = tk.Frame(parent, bg=self.root.COLOR_BACKGROUND)
+        self.pagination_frame.pack(fill='x', pady=(10, 0))
+
+    def display_current_page(self):
+        for widget in self.results_frame.winfo_children():
+            widget.destroy()
+
+        if not self.search_results:
+            tk.Label(self.results_frame, text="No se encontraron tareas con esos criterios.",
+                     font=self.root.FONT_BODY, bg=self.results_frame.cget('bg'), fg='grey').pack(pady=20)
+            return
+
+        start_index = (self.current_page - 1) * self.tasks_per_page
+        tasks_to_display = self.search_results[start_index: start_index + self.tasks_per_page]
+
+        for tarea in tasks_to_display:
+            self.insert_task_card(self.results_frame, tarea)
+
+    def insert_task_card(self, parent, tarea):
+        task_frame = tk.Frame(parent, bg=self.root.COLOR_FRAME, relief='solid', borderwidth=1, padx=10, pady=10)
+        task_frame.pack(fill='x', pady=4)
+
+        info_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
+        info_frame.pack(side='left', fill='x', expand=True)
+
+        tk.Label(info_frame, text=tarea.get('nombre', 'N/A'), font=("Helvetica", 14, "bold"), bg=info_frame.cget('bg'),
+                 anchor='w').pack(fill='x')
+
+        details_text = f"Fecha: {tarea.get('fecha')} | Prioridad: {tarea.get('nombre_prioridad', 'N/A')}"
+        if tarea.get('grupo'):
+            details_text += f" | Grupo: {tarea.get('grupo')}"
+        tk.Label(info_frame, text=details_text, font=("Helvetica", 10), bg=info_frame.cget('bg'), anchor='w').pack(
+            fill='x')
+
+        status_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
+        status_frame.pack(side='right', padx=(10, 0))
+
+        realizado = tarea.get('realizado', False)
+        tk.Label(status_frame, text="✔ Realizado" if realizado else "✖ Pendiente",
+                 fg=self.root.COLOR_SUCCESS if realizado else self.root.COLOR_DANGER,
+                 font=("Helvetica", 10, "bold"), bg=status_frame.cget('bg')).pack()
+        if tarea.get('archivado'):
+            tk.Label(status_frame, text="Archivado", font=("Helvetica", 9, "italic"), fg='grey',
+                     bg=status_frame.cget('bg')).pack()
+
+    def setup_pagination_controls(self):
+        for widget in self.pagination_frame.winfo_children(): widget.destroy()
+        if self.total_pages <= 1: return
+
+        self.prev_button = tk.Button(self.pagination_frame, text="◀ Anterior", command=self.prev_page,
+                                     font=self.root.FONT_BUTTON, relief='flat')
+        self.prev_button.pack(side='left')
+        self.page_label = tk.Label(self.pagination_frame, text="", font=("Helvetica", 12),
+                                   bg=self.pagination_frame.cget('bg'))
+        self.page_label.pack(side='left', expand=True)
+        self.next_button = tk.Button(self.pagination_frame, text="Siguiente ▶", command=self.next_page,
+                                     font=self.root.FONT_BUTTON, relief='flat')
+        self.next_button.pack(side='right')
+        self.update_pagination_controls()
+
+    def update_pagination_controls(self):
+        if not self.page_label: return
+        self.page_label.config(text=f"Página {self.current_page} de {self.total_pages}")
+        self.prev_button.config(state='normal' if self.current_page > 1 else 'disabled')
+        self.next_button.config(state='normal' if self.current_page < self.total_pages else 'disabled')
+
+    def next_page(self):
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            self.display_current_page()
+
+    def prev_page(self):
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.display_current_page()
+
+    # Métodos de navegación y calendario
+    def go_to_main(self):
+        MainView(root=self.root)
+
+    def open_calendar(self, target_date_str):
+        callback = lambda date: self.on_date_selected(date, target_date_str)
+        CalendarPicker(self.root.root, on_date_select_callback=callback)
+
+    def on_date_selected(self, new_date, target_date_str):
+        if target_date_str == 'start':
+            self.start_date = new_date
+            self.start_date_label.config(text=new_date.strftime('%d-%m-%Y'))
+        else:
+            self.end_date = new_date
+            self.end_date_label.config(text=new_date.strftime('%d-%m-%Y'))
+
+    def clear_date(self, target_date_str):
+        if target_date_str == 'start':
+            self.start_date = None
+            self.start_date_label.config(text="--/--/----")
+        else:
+            self.end_date = None
+            self.end_date_label.config(text="--/--/----")

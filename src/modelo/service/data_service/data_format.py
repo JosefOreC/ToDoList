@@ -59,6 +59,11 @@ class DataFormat:
 
     @staticmethod
     def convert_to_dict_groups_data(grupos: list):
+        """
+
+        :param grupos:
+        :return:
+        """
         data = []
 
         for grupo in grupos:
@@ -73,7 +78,19 @@ class DataFormat:
         return data
 
     @staticmethod
+    def convert_to_dict_groups_data_with_out_rol(grupos: list):
+        lista_grupo = []
+        for grupo in grupos:
+            lista_grupo.append(DataFormat.convert_to_dict_group_data(grupo))
+        return lista_grupo
+
+    @staticmethod
     def convert_to_dict_group_data(grupo: Grupo) -> dict:
+        """
+
+        :param grupo:
+        :return:
+        """
         return {
             'id_grupo': grupo.IDGrupo,
             'nombre': grupo.Nombre,
@@ -127,7 +144,11 @@ class DataFormat:
 
     @staticmethod
     def convert_to_dict_task_data_groups(tareas: list[Tarea, Rol]):
+        """
 
+        :param tareas:
+        :return:
+        """
         response = []
 
         for tarea, archivado, realizado, disponible in tareas:
@@ -147,6 +168,11 @@ class DataFormat:
 
     @staticmethod
     def convert_to_dict_basic_data_user(usuario_data: tuple):
+        """
+
+        :param usuario_data:
+        :return:
+        """
         return {
             'alias': usuario_data[0],
             'pregunta': usuario_data[1],
@@ -155,6 +181,11 @@ class DataFormat:
 
     @staticmethod
     def convert_to_dict_member_data_group(miembros: tuple or list)-> list[dict['alias', 'rol']]:
+        """
+
+        :param miembros:
+        :return:
+        """
         response = []
         for alias, rol in miembros:
             data = {
