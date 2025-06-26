@@ -67,6 +67,20 @@ class TaskServiceData:
         session.commit()
 
     @staticmethod
+    def delete_relation_task(id_usuario, id_tarea):
+        """
+        Se usa cuando se está eliminando una tarea de un grupo de la que ya no se es miembro (Desaparece solo
+        para el usuario que lo elimina)
+        :param id_usuario:
+        :param id_tarea:
+        :return:
+        """
+        usuario_tarea = session.query(UsuarioTarea).filter_by(IDUsuario=id_usuario, IDTarea=id_tarea).first()
+        session.delete(usuario_tarea)
+        session.commit()
+
+
+    @staticmethod
     def get_tasks_user_list_date(usuario_id: int, fecha_inicio: str or date, fecha_fin: str or date = None,
                                  activo = True,
                                  archivado = False):
@@ -124,6 +138,11 @@ class TaskServiceData:
             
     @staticmethod
     def soft_delete_task(id_tarea):
+        """
+
+        :param id_tarea:
+        :return:
+        """
         actualizacion = UpdateTask(id_tarea)
         actualizacion.update_activo(False)
         session.commit()
@@ -157,8 +176,7 @@ class TaskServiceData:
         session.commit()
 
     @staticmethod
-    def get_all_task_of_group_date(grupo_id, usuario_id: int, fecha_inicio: str or date,
-                                 activo = True):
+    def get_all_task_of_group_date(grupo_id, usuario_id: int, fecha_inicio: str or date, activo=True):
 
         fecha_inicio = DataFormat.convertir_data_to_date(fecha_inicio)
 

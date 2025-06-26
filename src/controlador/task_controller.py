@@ -324,15 +324,21 @@ class TaskController:
         """
 
         if (id_grupo:=TaskServiceData.get_id_group_of_task(id_tarea)) is not None:
-            rol = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
-            if rol in [Rol.miembro, Rol.editor]:
-                return False, "No se tienen los permisos para eliminar la tarea"
-
+            try:
+                rol = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+                if rol in [Rol.miembro, Rol.editor]:
+                    return False, "No se tienen los permisos para eliminar la tarea"
+            except:
+                try:
+                    TaskServiceData.delete_relation_task(id_usuario=SessionManager.get_id_user(), id_tarea=id_tarea)
+                except Exception as E:
+                    return False, f'No se pudo eliminar la tarea.\n{E}'
+                return True, "Tarea Eliminada"
         try:
             TaskServiceData.soft_delete_task(id_tarea=id_tarea)
             return True, "Tarea eliminada"
-        except:
-            return False, "No se pudo eliminar la tarea."
+        except Exception as E:
+            return False, f"No se pudo eliminar la tarea.\n{E}"
 
 
     @staticmethod

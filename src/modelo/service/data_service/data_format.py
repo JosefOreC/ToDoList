@@ -119,7 +119,10 @@ class DataFormat:
                 continue
             if id_grupo:
                 grupo = GroupServiceData.get_data_task_group_name(id_grupo)
-                rol = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo).name
+                try:
+                    rol = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo).name
+                except:
+                    rol = None
             else:
                 grupo = None
                 rol = None

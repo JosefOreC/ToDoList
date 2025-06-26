@@ -192,22 +192,29 @@ class GroupServiceData:
             session.delete(relacion)
 
     @staticmethod
+    def __conserver_task(relaciones_tareas: list[UsuarioTarea]):
+        for relacion in relaciones_tareas:
+            relacion.Disponible = False
+
+    @staticmethod
     def __delete_member_group(id_grupo, id_usuario, delete_all_task):
         relacion_grupo = session.query(UsuarioGrupo).filter_by(IDGrupo=id_grupo, IDUsuario=id_usuario).first()
 
-        if delete_all_task:
-            relaciones_tareas = (session.query(UsuarioTarea).join(Tarea, Tarea.IDTarea == UsuarioTarea.IDTarea)
-                                 .filter(UsuarioTarea.IDGrupo == id_grupo, UsuarioTarea.IDUsuario==id_usuario).all())
-        else:
-            relaciones_tareas = (session.query(UsuarioTarea).join(Tarea, Tarea.IDTarea == UsuarioTarea.IDTarea)
+        tareas_pasadas_actuales = (session.query(UsuarioTarea).join(Tarea, Tarea.IDTarea == UsuarioTarea.IDTarea)
+                                 .filter(UsuarioTarea.IDGrupo == id_grupo, UsuarioTarea.IDUsuario == id_usuario,
+                                Tarea.Fecha_programada <= date.today()).all())
+        tareas_futuras = (session.query(UsuarioTarea).join(Tarea, Tarea.IDTarea == UsuarioTarea.IDTarea)
                                  .filter(UsuarioTarea.IDGrupo == id_grupo, UsuarioTarea.IDUsuario == id_usuario,
                                 Tarea.Fecha_programada > date.today()).all())
 
+        if tareas_futuras:
+            GroupServiceData.__delete_tareas_relacion(tareas_futuras)
 
-
-
-        if relaciones_tareas:
-            GroupServiceData.__delete_tareas_relacion(relaciones_tareas)
+        if tareas_pasadas_actuales:
+            if delete_all_task:
+                GroupServiceData.__delete_tareas_relacion(tareas_pasadas_actuales)
+            else:
+                GroupServiceData.__conserver_task(tareas_pasadas_actuales)
 
         session.delete(relacion_grupo)
         session.commit()
