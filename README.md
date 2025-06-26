@@ -44,7 +44,7 @@ ToDoList
 ![Estructura](https://i.imgur.com/l7r5bLA.png)
 
 ## Información detallada del proyecto
-
+https://deepwiki.com/JosefOreC/ToDoList/1-overview
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/JosefOreC/ToDoList)
 
 
