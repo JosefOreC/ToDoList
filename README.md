@@ -31,7 +31,11 @@ pip install bcrypt
    
     ![Segundo paso](https://i.imgur.com/j8iUxGf.png)
    
-3. **Corre el archivo main.py**
+3. **Posteriormente instalar la libreria coverage:** 
+pip install coverage
+  ![Segundo paso](https://i.imgur.com/ZAYjlfe.png)
+
+5. **Corre el archivo main.py**
    
    ![Tercer paso](https://i.imgur.com/FF1fIn3.png)
    
