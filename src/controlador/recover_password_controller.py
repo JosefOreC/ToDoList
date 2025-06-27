@@ -41,7 +41,7 @@ class RecoverPasswordController:
             response = "Se validó la recuperación de contraseña."
         except Exception as E:
             is_correct_answer = False
-            success = False,
+            success = False
             response = ("No se pudo recuperar los datos. \nProceso de recuperación no completado.\nIntentelo de nuevo."
                         f"\n{E}")
 
@@ -67,7 +67,7 @@ class RecoverPasswordController:
             success = True
             response = "Se cambió la contraseña."
         except Exception as E:
-            success = False,
+            success = False
             response = f"No se pudo cambiar la contraseña.\n{E}"
         finally:
             RecoverPasswordController.__recuperacion = None
