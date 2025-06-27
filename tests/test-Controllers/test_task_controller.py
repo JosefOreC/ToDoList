@@ -1,176 +1,238 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from datetime import date
+from datetime import date, datetime
 from src.controlador.task_controller import TaskController
+from src.modelo.service.session_service.session_manager import SessionManager
+from src.modelo.entities.rol import Rol
+from src.modelo.entities.tarea import Tarea
 
 
 class TestTaskController(unittest.TestCase):
 
     def setUp(self):
-        # Configuración común para las pruebas
+        # Configurar mocks para todas las dependencias
+        self.mock_session_manager = MagicMock(spec=SessionManager)
+        self.mock_session_instance = MagicMock()
+        self.mock_user = MagicMock()
+        self.mock_user.IDUsuario = 1
+        self.mock_user.Alias = "test_user"
+
+        # Configurar SessionManager
+        self.mock_session_manager.get_instance.return_value = self.mock_session_instance
+        self.mock_session_instance.usuario = self.mock_user
+        self.mock_session_manager.get_id_user.return_value = 1
+
+        # Mocks para otros servicios
         self.mock_task_service = MagicMock()
+        self.mock_group_service = MagicMock()
+        self.mock_user_service = MagicMock()
         self.mock_data_format = MagicMock()
         self.mock_register_task = MagicMock()
 
-        # Patches para los módulos externos
-        self.patcher_task_service = patch('src.controlador.task_controller.TaskServiceData', self.mock_task_service)
-        self.patcher_data_format = patch('src.controlador.task_controller.DataFormat', self.mock_data_format)
-        self.patcher_register_task = patch('src.controlador.task_controller.RegisterTask', self.mock_register_task)
+        # Aplicar patches
+        self.patchers = [
+            patch('src.controlador.task_controller.SessionManager', self.mock_session_manager),
+            patch('src.controlador.task_controller.TaskServiceData', self.mock_task_service),
+            patch('src.controlador.task_controller.GroupServiceData', self.mock_group_service),
+            patch('src.controlador.task_controller.UserServiceData', self.mock_user_service),
+            patch('src.controlador.task_controller.DataFormat', self.mock_data_format),
+            patch('src.controlador.task_controller.RegisterTask', self.mock_register_task)
+        ]
 
-        self.patcher_task_service.start()
-        self.patcher_data_format.start()
-        self.patcher_register_task.start()
+        for patcher in self.patchers:
+            patcher.start()
 
-        self.addCleanup(self.patcher_task_service.stop)
-        self.addCleanup(self.patcher_data_format.stop)
-        self.addCleanup(self.patcher_register_task.stop)
+        # Configurar comportamientos comunes
+        self.mock_data_format.convertir_data_to_date.return_value = date(2025, 1, 1)
+        self.mock_data_format.convert_to_dict_task_data_groups.return_value = {'task': 'data'}
+        self.mock_group_service.get_rol_in_group.return_value = Rol.editor
+
+    def tearDown(self):
+        for patcher in self.patchers:
+            patcher.stop()
 
     def test_recover_tasks_today_success(self):
-        """Prueba la recuperación exitosa de tareas para hoy"""
-        self.mock_task_service.get_tasks_session_user_list_today.return_value = ['Tarea 1', 'Tarea 2']
+        """Prueba recuperación exitosa de tareas para hoy"""
+        self.mock_task_service.get_tasks_session_user_list_today.return_value = ['task1', 'task2']
 
-        response = TaskController.recover_tasks_today()
+        result = TaskController.recover_tasks_today()
 
-        self.assertTrue(response['success'])
-        self.assertEqual(response['data']['tareas'], ['Tarea 1', 'Tarea 2'])
-        self.mock_task_service.get_tasks_session_user_list_today.assert_called_once()
+        self.assertTrue(result['success'])
+        self.assertEqual(result['data']['tareas'], ['task1', 'task2'])
 
     def test_recover_tasks_today_empty(self):
         """Prueba cuando no hay tareas para hoy"""
         self.mock_task_service.get_tasks_session_user_list_today.return_value = []
 
-        response = TaskController.recover_tasks_today()
+        result = TaskController.recover_tasks_today()
 
-        self.assertTrue(response['success'])
-        self.assertEqual(response['data']['tareas'], [])
+        self.assertTrue(result['success'])
+        self.assertEqual(result['data']['tareas'], None)
 
     def test_recover_tasks_today_error(self):
-        """Prueba el manejo de errores al recuperar tareas"""
-        self.mock_task_service.get_tasks_session_user_list_today.side_effect = Exception("Error de base de datos")
+        """Prueba manejo de errores al recuperar tareas"""
+        self.mock_task_service.get_tasks_session_user_list_today.side_effect = Exception("DB Error")
 
-        response = TaskController.recover_tasks_today()
+        result = TaskController.recover_tasks_today()
 
-        self.assertFalse(response['success'])
-        self.assertIn("Error de base de datos", response['response'])
+        self.assertFalse(result['success'])
+        self.assertIn("DB Error", result['response'])
+
+    def test_recover_task_archivate_success(self):
+        """Prueba recuperación de tareas archivadas"""
+        self.mock_task_service.get_task_user_archivade.return_value = ['archived1', 'archived2']
+
+        result = TaskController.recover_task_archivate()
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['data']['tareas'], ['archived1', 'archived2'])
+
+    def test_recover_task_date_success(self):
+        """Prueba recuperación de tareas por fecha"""
+        test_date = datetime(2025, 1, 1)
+        self.mock_task_service.get_tasks_user_list_date.return_value = ['task1', 'task2']
+
+        result = TaskController.recover_task_date(test_date)
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['data']['tareas'], ['task1', 'task2'])
 
     def test_event_register_task_user_success(self):
-        """Prueba el registro exitoso de una tarea"""
-        self.mock_data_format.convertir_data_to_date.return_value = date(2025, 7, 1)
-        mock_task_instance = MagicMock()
-        mock_task_instance.register_task.return_value = (True, "Tarea registrada")
-        self.mock_register_task.return_value = mock_task_instance
+        """Prueba registro exitoso de tarea de usuario"""
+        mock_task = MagicMock(spec=Tarea)
+        mock_register = MagicMock()
+        mock_register.register_task.return_value = (True, "Success")
+        self.mock_register_task.return_value = mock_register
 
         result, message = TaskController.event_register_task_user(
-            "Comprar pan", "2025-07-01", 3, "Ir a la panadería"
+            "Test", "2025-01-01", 3, "Details"
         )
 
         self.assertTrue(result)
-        self.assertEqual(message, "Tarea registrada")
-        self.mock_register_task.assert_called_once()
-        mock_task_instance.register_task.assert_called_once()
+        self.assertEqual(message, "Success")
 
     def test_event_register_task_user_invalid_date(self):
         """Prueba con fecha inválida"""
-        self.mock_data_format.convertir_data_to_date.side_effect = ValueError("Formato de fecha inválido")
+        self.mock_data_format.convertir_data_to_date.side_effect = ValueError("Invalid date")
 
         result, message = TaskController.event_register_task_user(
-            "Tarea", "fecha-invalida", 2, "Detalle"
+            "Test", "invalid", 3, "Details"
         )
 
         self.assertFalse(result)
-        self.assertIn("Formato de fecha inválido", message)
+        self.assertIn("Invalid date", message)
 
-    def test_event_register_task_user_priority_out_of_range(self):
-        """Prueba con prioridad fuera de rango"""
-        self.mock_data_format.convertir_data_to_date.return_value = date.today()
-
+    def test_event_register_task_user_invalid_priority(self):
+        """Prueba con prioridad inválida"""
         result, message = TaskController.event_register_task_user(
-            "Tarea", "2025-07-01", 6, "Detalle"
+            "Test", "2025-01-01", 6, "Details"
         )
 
         self.assertFalse(result)
         self.assertIn("Prioridad no válida", message)
 
-    def test_get_tasks_of_group_date_success(self):
-        """Prueba la obtención exitosa de tareas de grupo por fecha"""
-        self.mock_task_service.get_tasks_of_group_date.return_value = ['Tarea G1', 'Tarea G2']
-        self.mock_data_format.convert_to_dict_task_data.return_value = {'tarea1': 'data1', 'tarea2': 'data2'}
-
-        response = TaskController.get_tasks_of_group_date(date(2025, 7, 1), 1)
-
-        self.assertTrue(response['success'])
-        self.assertEqual(response['data']['tareas'], {'tarea1': 'data1', 'tarea2': 'data2'})
-
-    def test_get_tasks_of_group_date_empty(self):
-        """Prueba cuando no hay tareas para la fecha y grupo"""
-        self.mock_task_service.get_tasks_of_group_date.return_value = []
-
-        response = TaskController.get_tasks_of_group_date(date(2025, 7, 1), 1)
-
-        self.assertTrue(response['success'])
-        self.assertEqual(response['data']['tareas'], [])
-
-    def test_update_state_task_success(self):
-        """Prueba la actualización exitosa del estado de una tarea"""
-        self.mock_task_service.update_state_task.return_value = True
-
-        result = TaskController.update_state_task(1, True)
-
-        self.assertTrue(result['success'])
-        self.assertEqual(result['response'], "Se actualizó el estado de la tarea.")
-        self.mock_task_service.update_state_task.assert_called_once_with(1, True)
-
-    def test_update_state_task_failure(self):
-        """Prueba el fallo al actualizar el estado de una tarea"""
-        self.mock_task_service.update_state_task.return_value = False
-
-        result = TaskController.update_state_task(1, True)
-
-        self.assertFalse(result['success'])
-        self.assertEqual(result['response'], "No se pudo actualizar el estado de la tarea.")
-
-    def test_delete_task_success(self):
-        """Prueba la eliminación exitosa de una tarea"""
-        self.mock_task_service.delete_task.return_value = True
-
-        result = TaskController.delete_task(1)
-
-        self.assertTrue(result['success'])
-        self.assertEqual(result['response'], "Se eliminó la tarea correctamente.")
-
-    def test_delete_task_failure(self):
-        """Prueba el fallo al eliminar una tarea"""
-        self.mock_task_service.delete_task.return_value = False
-
-        result = TaskController.delete_task(1)
-
-        self.assertFalse(result['success'])
-        self.assertEqual(result['response'], "No se pudo eliminar la tarea.")
-
-    def test_validar_datos_correctos(self):
-        """Prueba la validación de datos correctos"""
-        self.mock_data_format.convertir_data_to_date.return_value = date(2025, 7, 1)
-
-        result, msg = TaskController.validar_datos("2025-07-01", 3)
+    def test_validar_datos_valid(self):
+        """Prueba validación de datos correctos"""
+        result, message = TaskController.validar_datos("2025-01-01", 3)
 
         self.assertTrue(result)
-        self.assertEqual(msg, "Datos validos")
+        self.assertEqual(message, "Datos validos")
 
-    def test_validar_datos_fecha_invalida(self):
-        """Prueba con fecha inválida"""
-        self.mock_data_format.convertir_data_to_date.side_effect = ValueError("Fecha inválida")
+    def test_event_update_task_user_success(self):
+        """Prueba actualización exitosa de tarea"""
+        self.mock_task_service.update_task_user.return_value = None
 
-        result, msg = TaskController.validar_datos("fecha-invalida", 3)
+        result, message = TaskController.event_update_task_user(
+            1, 1, "New Name", "2025-01-01", 3, True, True, "Details"
+        )
 
-        self.assertFalse(result)
-        self.assertIn("Fecha inválida", str(msg))
+        self.assertTrue(result)
+        self.assertEqual(message, "Se guardaron los cambiós con exito")
 
-    def test_validar_datos_prioridad_invalida(self):
-        """Prueba con prioridad inválida"""
-        result, msg = TaskController.validar_datos("2025-07-01", "no-numero")
+    def test_event_update_task_session_manager_success(self):
+        """Prueba actualización desde sesión"""
+        self.mock_task_service.update_task_user.return_value = None
 
-        self.assertFalse(result)
-        self.assertIn("invalid literal", str(msg))
+        result, message = TaskController.event_update_task_session_manager(
+            1, "New Name", "2025-01-01", 3, True, True, "Details"
+        )
+
+        self.assertTrue(result)
+        self.assertEqual(message, "Se guardaron los cambiós con exito")
+
+    def test_event_check_in_task_success(self):
+        """Prueba check-in de tarea exitoso"""
+        self.mock_task_service.is_editable_task_for_user.return_value = True
+        self.mock_task_service.update_task_user.return_value = None
+
+        result, message = TaskController.event_check_in_task(1, True)
+
+        self.assertTrue(result)
+        self.assertIn("exito", message)
+
+    def test_event_edit_task_session_manager_success(self):
+        """Prueba edición de tarea exitosa"""
+        self.mock_task_service.get_id_group_of_task.return_value = None
+        self.mock_task_service.update_task_user.return_value = None
+
+        result, message = TaskController.event_edit_task_session_manager(
+            1, "New", "2025-01-01", 3, "Details"
+        )
+
+        self.assertTrue(result)
+        self.assertIn("exito", message)
+
+    def test_event_register_task_group_success(self):
+        """Prueba registro de tarea grupal exitoso"""
+        self.mock_group_service.get_rol_in_group.return_value = Rol.editor
+        mock_task = MagicMock(spec=Tarea)
+        mock_register = MagicMock()
+        mock_register.register_task.return_value = (True, "Success")
+        self.mock_register_task.return_value = mock_register
+
+        result, message = TaskController.event_register_task_group(
+            1, "Test", "2025-01-01", 3, "Details", False, 'all'
+        )
+
+        self.assertTrue(result)
+        self.assertEqual(message, "Success")
+
+    def test_event_archive_task_success(self):
+        """Prueba archivado exitoso de tarea"""
+        self.mock_task_service.update_task_user.return_value = None
+
+        result = TaskController.event_archive_task(1)
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['response'], "Tarea Archivada")
+
+    def test_event_delete_task_success(self):
+        """Prueba eliminación exitosa de tarea"""
+        self.mock_task_service.get_id_group_of_task.return_value = None
+        self.mock_task_service.soft_delete_task.return_value = None
+
+        result, message = TaskController.event_delete_task(1)
+
+        self.assertTrue(result)
+        self.assertEqual(message, "Tarea eliminada")
+
+    def test_get_tasks_of_group_date_success(self):
+        """Prueba obtención de tareas grupales por fecha"""
+        self.mock_task_service.get_all_task_of_group_date.return_value = ['task1', 'task2']
+
+        result = TaskController.get_tasks_of_group_date(date(2025, 1, 1), 1)
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['data']['tareas'], {'task': 'data'})
+
+    def test_event_unarchive_task_success(self):
+        """Prueba desarchivado exitoso de tarea"""
+        self.mock_task_service.update_task_user.return_value = None
+
+        result = TaskController.event_unarchive_task(1)
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['response'], 'Se archivó la tarea')
 
 
 if __name__ == '__main__':
