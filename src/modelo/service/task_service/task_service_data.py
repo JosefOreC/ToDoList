@@ -2,7 +2,6 @@
 Clase que controla la entidad tarea y relacionados
 desde la base de datos CRUD.
 """
-from imaplib import InternalDate
 
 from src.modelo.database_management.base.declarative_base import session
 from src.modelo.entities.modelo import UsuarioTarea, Tarea, Grupo

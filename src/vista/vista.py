@@ -694,13 +694,17 @@ class MainView:
         ManageGroupsView(root=self.root)
 
     def refresh_view(self):
-        self.setup_task_display()
+        MainView(self.root)
 
+
+# En tu archivo vista.py
+
+# En tu archivo vista.py
 
 class TaskDetailView:
     """
-    Muestra los detalles completos de una tarea y permite acciones
-    contextuales (asignar a grupo, ver miembros, etc.).
+    Muestra los detalles completos de una tarea con un diseño vertical y organizado,
+    y permite acciones contextuales (asignar a grupo, ver miembros, etc.).
     """
 
     def __init__(self, root: 'RootView', main_view: 'MainView', task_id: int):
@@ -709,7 +713,13 @@ class TaskDetailView:
         self.task_id = task_id
 
         self.task_data = None
-        self.group_assignment_frame = None
+
+        # Atributos para la funcionalidad de asignación a grupo
+        self.assign_group_widgets = {}
+        self.all_group_members_data = {}
+        self.members_to_assign = {}
+        self.selected_group_id = None
+        self.assignment_type_var = tk.StringVar(value="todos")
         self.group_var = tk.StringVar()
         self.group_id_map = {}
 
@@ -717,28 +727,45 @@ class TaskDetailView:
         self._load_data_and_build_ui()
 
     def _load_data_and_build_ui(self):
-        """Carga los datos de la tarea y construye la UI correspondiente."""
+        """Carga los datos de la tarea y construye la UI principal."""
+        # Limpiamos cualquier widget anterior antes de construir
+        for widget in self.root.root.winfo_children():
+            widget.destroy()
+
         response = TaskController.recover_all_data_task_to_view_details(self.task_id)
 
-        if not response['success']:
-            messagebox.showerror("Error", response['response'])
+        if not response.get('success') or not response.get('data'):
+            messagebox.showerror("Error", response.get('response', 'No se pudieron cargar los datos.'))
             self.go_to_main_view()
             return
 
         self.task_data = response['data']
 
-        # Decide qué vista construir basado en si la tarea es de grupo
+        # --- NUEVO DISEÑO: Contenedor principal con Scroll ---
+        main_canvas = tk.Canvas(self.root.root, bg=self.root.COLOR_BACKGROUND, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.root.root, orient="vertical", command=main_canvas.yview)
+        scrollable_frame = tk.Frame(main_canvas, bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
+
+        scrollable_frame.bind("<Configure>", lambda e: main_canvas.configure(scrollregion=main_canvas.bbox("all")))
+        main_canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        main_canvas.configure(yscrollcommand=scrollbar.set)
+
+        main_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self._build_header(scrollable_frame)
+
         if self.task_data.get('miembros'):
-            self._build_group_task_view()
+            self._build_group_task_view(scrollable_frame)
         else:
-            self._build_individual_task_view()
+            self._build_individual_task_view(scrollable_frame)
 
-    def _build_base_frame(self):
-        """Crea el contenedor principal y el encabezado común."""
-        main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
-        main_frame.pack(fill='both', expand=True)
+        tk.Button(scrollable_frame, text="← Volver a la Lista", command=self.go_to_main_view, bg='#6C757D',
+                  fg='white').pack(pady=(20, 0))
 
-        header_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
+    def _build_header(self, parent):
+        """Crea el encabezado común con los detalles básicos de la tarea."""
+        header_frame = tk.Frame(parent, bg=parent.cget('bg'))
         header_frame.pack(fill='x', pady=(0, 15))
 
         tk.Label(header_frame, text=self.task_data['tarea']['nombre'], font=self.root.FONT_TITLE,
@@ -749,85 +776,154 @@ class TaskDetailView:
         tk.Label(header_frame, text=details_text, font=("Helvetica", 12, "italic"), fg='#566573',
                  bg=header_frame.cget('bg')).pack(anchor='w')
 
-        return main_frame
-
-    def _build_individual_task_view(self):
+    def _build_individual_task_view(self, parent):
         """Construye la UI para una tarea que no pertenece a un grupo."""
-        main_frame = self._build_base_frame()
+        details_frame = tk.LabelFrame(parent, text="Detalles", font=self.root.FONT_LABEL, bg=parent.cget('bg'), padx=10,
+                                      pady=10)
+        details_frame.pack(fill='x', pady=5)
+        tk.Label(details_frame, text=self.task_data['tarea']['detalle'] or "Sin detalles.", font=self.root.FONT_BODY,
+                 bg=details_frame.cget('bg'), wraplength=1000, justify='left').pack(fill='x', anchor='w')
 
-        tk.Label(main_frame, text="Detalle:", font=self.root.FONT_LABEL, bg=main_frame.cget('bg')).pack(anchor='w',
-                                                                                                        pady=(10, 0))
-        tk.Label(main_frame, text=self.task_data['tarea']['detalle'] or "Sin detalles.", font=self.root.FONT_BODY,
-                 bg=self.root.COLOR_FRAME, wraplength=1000, justify='left', padx=5, pady=5).pack(fill='x', anchor='w')
+        self.assign_group_widgets['container'] = tk.LabelFrame(parent, text="Asignar a Grupo",
+                                                               font=self.root.FONT_LABEL, bg=parent.cget('bg'), padx=10,
+                                                               pady=10)
+        self.assign_group_widgets['container'].pack(fill='x', pady=10)
 
-        # --- Sección para asignar a un grupo ---
-        self.group_assignment_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
-        # Se empaquetará más tarde al hacer clic en el botón
+        self.assign_group_widgets['button'] = tk.Button(self.assign_group_widgets['container'],
+                                                        text="➕ Asignar a un Grupo",
+                                                        command=self._build_group_assignment_ui,
+                                                        font=self.root.FONT_BUTTON, bg=self.root.COLOR_SUCCESS,
+                                                        fg='white')
+        self.assign_group_widgets['button'].pack(pady=5)
 
-        assign_button = tk.Button(main_frame, text="➕ Asignar a un Grupo", command=self.show_group_assignment_ui,
-                                  font=self.root.FONT_BUTTON, bg=self.root.COLOR_SUCCESS, fg='white')
-        assign_button.pack(pady=20)
-
-        # Contenido del frame de asignación (inicialmente oculto)
-        tk.Label(self.group_assignment_frame, text="Buscar y seleccionar grupo:", font=self.root.FONT_LABEL,
-                 bg=main_frame.cget('bg')).pack(anchor='w')
-        self.group_combobox = ttk.Combobox(self.group_assignment_frame, textvariable=self.group_var,
-                                           font=self.root.FONT_BODY, width=40)
-        self.group_combobox.pack(side='left', padx=(0, 10))
-        self.group_combobox.bind('<KeyRelease>', self.update_group_suggestions)
-        tk.Button(self.group_assignment_frame, text="Guardar Asignación", command=self.assign_task_to_group).pack(
-            side='left')
-
-        tk.Button(main_frame, text="← Volver", command=self.go_to_main_view).pack(side='bottom', pady=10)
-
-    def _build_group_task_view(self):
+    def _build_group_task_view(self, parent):
         """Construye la UI para una tarea que ya pertenece a un grupo."""
-        main_frame = self._build_base_frame()
+        details_frame = tk.LabelFrame(parent, text="Detalles", font=self.root.FONT_LABEL, bg=parent.cget('bg'), padx=10,
+                                      pady=10)
+        details_frame.pack(fill='x', pady=5)
+        tk.Label(details_frame, text=self.task_data['tarea']['detalle'] or "Sin detalles.", font=self.root.FONT_BODY,
+                 bg=details_frame.cget('bg'), wraplength=1000, justify='left').pack(fill='x', anchor='w')
 
-        paned_window = ttk.PanedWindow(main_frame, orient='horizontal')
-        paned_window.pack(fill='both', expand=True, pady=10)
+        members_main_frame = tk.LabelFrame(parent, text="Miembros y Estado", font=self.root.FONT_LABEL,
+                                           bg=parent.cget('bg'), padx=10, pady=10)
+        members_main_frame.pack(fill='both', expand=True, pady=5)
+        self.create_members_list(members_main_frame)
 
-        # Panel izquierdo: Detalles y Acciones
-        left_panel = tk.Frame(paned_window, bg=main_frame.cget('bg'))
-        tk.Label(left_panel, text="Detalle de la Tarea:", font=self.root.FONT_LABEL, bg=left_panel.cget('bg')).pack(
-            anchor='w')
-        tk.Label(left_panel, text=self.task_data['tarea']['detalle'] or "Sin detalles.", font=self.root.FONT_BODY,
-                 bg=self.root.COLOR_FRAME, wraplength=600, justify='left', padx=5, pady=5).pack(fill='both',
-                                                                                                expand=True, anchor='n')
+        actions_main_frame = tk.LabelFrame(parent, text="Acciones", font=self.root.FONT_LABEL, bg=parent.cget('bg'),
+                                           padx=10, pady=10)
+        actions_main_frame.pack(fill='x', pady=5)
+        self.create_group_task_actions(actions_main_frame)
 
-        # Panel de Acciones para la tarea
-        self.create_group_task_actions(left_panel)
-        paned_window.add(left_panel, weight=2)
+    def _build_group_assignment_ui(self):
+        """Construye la interfaz completa de asignación de grupo."""
+        if 'button' in self.assign_group_widgets and self.assign_group_widgets['button'].winfo_exists():
+            self.assign_group_widgets['button'].destroy()
 
-        # Panel derecho: Lista de Miembros
-        right_panel = tk.Frame(paned_window, bg=main_frame.cget('bg'))
-        self.create_members_list(right_panel)
-        paned_window.add(right_panel, weight=1)
+        parent = self.assign_group_widgets['container']
 
-        tk.Button(main_frame, text="← Volver", command=self.go_to_main_view).pack(side='bottom', pady=10)
+        group_frame = tk.Frame(parent, bg=parent.cget('bg'))
+        group_frame.pack(fill='x', pady=5)
+        tk.Label(group_frame, text="Buscar Grupo:", font=self.root.FONT_BODY, bg=parent.cget('bg')).pack(side='left')
+        group_combobox = ttk.Combobox(group_frame, textvariable=self.group_var, font=self.root.FONT_BODY)
+        group_combobox.pack(side='left', padx=10, fill='x', expand=True)
+        group_combobox.bind('<KeyRelease>', lambda e: self.update_group_suggestions(e, group_combobox))
+        group_combobox.bind("<<ComboboxSelected>>", lambda e: self.on_group_selected_for_assignment(e, group_combobox))
+        self.assign_group_widgets['group_combobox'] = group_combobox
+        self.update_group_suggestions(group_combobox=group_combobox)
+
+        self.assign_group_widgets['assignment_type_frame'] = tk.Frame(parent, bg=parent.cget('bg'))
+        self.assign_group_widgets['assignment_type_frame'].pack(fill='x', pady=5)
+        self.assign_group_widgets['members_frame'] = tk.Frame(parent, bg=parent.cget('bg'))
+        self.assign_group_widgets['members_frame'].pack(fill='x', pady=5)
+
+    def on_group_selected_for_assignment(self, event, group_combobox):
+        """Se activa al seleccionar un grupo del combobox."""
+        selected_name = group_combobox.get()
+        self.selected_group_id = self.group_id_map.get(selected_name)
+
+        for widget in self.assign_group_widgets['assignment_type_frame'].winfo_children(): widget.destroy()
+        for widget in self.assign_group_widgets['members_frame'].winfo_children(): widget.destroy()
+        self.members_to_assign.clear()
+
+        if not self.selected_group_id: return
+
+        parent = self.assign_group_widgets['assignment_type_frame']
+        tk.Radiobutton(parent, text="Asignar a Todos", variable=self.assignment_type_var, value="todos",
+                       bg=parent.cget('bg'), command=self.on_assignment_type_changed).pack(side='left')
+        tk.Radiobutton(parent, text="Personalizado", variable=self.assignment_type_var, value="personalizado",
+                       bg=parent.cget('bg'), command=self.on_assignment_type_changed).pack(side='left', padx=10)
+
+        self.load_group_members_data()
+        self.on_assignment_type_changed()
+
+    def on_assignment_type_changed(self):
+        """Muestra u oculta la selección de miembros personalizada."""
+        parent = self.assign_group_widgets['members_frame']
+        for widget in parent.winfo_children(): widget.destroy()
+        self.members_to_assign.clear()
+
+        if self.assignment_type_var.get() == "personalizado":
+            tk.Label(parent, text="Miembros a Asignar:", font=self.root.FONT_BODY, bg=parent.cget('bg')).pack(
+                anchor='w')
+            self.assign_group_widgets['members_display'] = tk.Frame(parent, bg=self.root.COLOR_FRAME, relief='sunken',
+                                                                    borderwidth=1)
+            self.assign_group_widgets['members_display'].pack(fill='x', pady=5, ipady=5)
+
+            master_alias = GroupController.get_group_master_alias(self.selected_group_id)
+            current_user_alias = SessionController.get_alias_user()
+
+            if master_alias in self.all_group_members_data: self.add_member_to_assign_list(master_alias, is_fixed=True)
+            if current_user_alias in self.all_group_members_data and current_user_alias != master_alias: self.add_member_to_assign_list(
+                current_user_alias, is_fixed=True)
+
+            self.display_assigned_members()
+
+        tk.Button(parent, text="Confirmar Asignación", command=self.confirm_group_assignment,
+                  bg=self.root.COLOR_PRIMARY, fg='white').pack(pady=10)
+
+    def confirm_group_assignment(self):
+        """Recopila los datos y llama al controlador para asignar la tarea al grupo."""
+        if not self.selected_group_id:
+            messagebox.showwarning("Grupo no seleccionado", "Debes seleccionar un grupo.", parent=self.root.root)
+            return
+
+        miembros_final = 'all'
+        if self.assignment_type_var.get() == "personalizado":
+            miembros_final = [[alias, data['var'].get()] for alias, data in self.members_to_assign.items()]
+
+        success, response = TaskController.event_add_group_task_exits(
+            id_tarea=self.task_id, id_grupo=self.selected_group_id, miembros_disponible=miembros_final)
+
+        if success:
+            messagebox.showinfo("Éxito", response)
+            self._load_data_and_build_ui()
+        else:
+            messagebox.showerror("Error", response)
 
     def create_group_task_actions(self, parent):
-        actions_frame = tk.Frame(parent, bg=parent.cget('bg'), pady=10)
-        actions_frame.pack(fill='x')
-        tk.Label(actions_frame, text="Acciones de Tarea", font=self.root.FONT_LABEL, bg=parent.cget('bg')).pack(
-            anchor='w', pady=(10, 5))
+        """Crea los botones de acción para una tarea de grupo."""
+        current_user_alias = SessionController.get_alias_user()
+        user_rol = None
+        for member in self.task_data.get('miembros', []):
+            if member['alias'] == current_user_alias:
+                user_rol = member.get('rol').name if hasattr(member.get('rol'), 'name') else member.get('rol')
+                break
 
-        user_rol = self.task_data['user']['rol']
+        if not user_rol: return
 
         if user_rol in ['master', 'editor']:
-            tk.Button(actions_frame, text="Editar Tarea", command=self.edit_task).pack(fill='x', pady=2)
-            tk.Button(actions_frame, text="Agregar/Quitar Usuarios (Próximamente)", state='disabled').pack(fill='x',
-                                                                                                           pady=2)
-            tk.Button(actions_frame, text="Cambiar Tipo de Check (Próximamente)", state='disabled').pack(fill='x',
-                                                                                                         pady=2)
+            tk.Button(parent, text="Editar Tarea", command=self.edit_task, bg=self.root.COLOR_PRIMARY, fg='white').pack(
+                fill='x', pady=2, ipady=3)
+            tk.Button(parent, text="Agregar/Quitar Usuarios (Próximamente)", state='disabled').pack(fill='x', pady=2)
+            tk.Button(parent, text="Cambiar Tipo de Check (Próximamente)", state='disabled').pack(fill='x', pady=2)
 
         if user_rol == 'master':
-            tk.Button(actions_frame, text="Eliminar Tarea del Grupo", command=self.delete_task,
-                      bg=self.root.COLOR_DANGER, fg='white').pack(fill='x', pady=2)
+            tk.Button(parent, text="Eliminar Tarea del Grupo", command=self.delete_task, bg=self.root.COLOR_DANGER,
+                      fg='white').pack(fill='x', pady=2, ipady=3)
 
     def create_members_list(self, parent):
-        tk.Label(parent, text="Estado de Miembros", font=self.root.FONT_LABEL, bg=parent.cget('bg')).pack(anchor='w')
-        canvas = tk.Canvas(parent, bg=self.root.COLOR_FRAME, highlightthickness=0)
+        """Crea la lista visual de miembros y su estado de check."""
+        canvas = tk.Canvas(parent, bg=self.root.COLOR_FRAME, highlightthickness=0, height=200)
         scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
         list_frame = tk.Frame(canvas, bg=self.root.COLOR_FRAME)
 
@@ -840,8 +936,7 @@ class TaskDetailView:
 
         for miembro in self.task_data['miembros']:
             item_frame = tk.Frame(list_frame, bg=list_frame.cget('bg'), padx=5, pady=3)
-            item_frame.pack(fill='x')
-
+            item_frame.pack(fill='x', expand=True)
             check_icon = "✔" if miembro['check'] else "✖"
             check_color = self.root.COLOR_SUCCESS if miembro['check'] else self.root.COLOR_DANGER
             tk.Label(item_frame, text=check_icon, font=("Helvetica", 12, "bold"), fg=check_color,
@@ -849,58 +944,59 @@ class TaskDetailView:
             tk.Label(item_frame, text=miembro['alias'], font=self.root.FONT_BODY, bg=item_frame.cget('bg')).pack(
                 side='left', padx=5)
 
-    def show_group_assignment_ui(self):
-        """Muestra la sección para asignar la tarea a un grupo."""
-        if self.group_assignment_frame:
-            self.group_assignment_frame.pack(pady=10, fill='x')
-            self.update_group_suggestions()
-
-    def update_group_suggestions(self, event=None):
-        typed_text = self.group_var.get()
+    def update_group_suggestions(self, event=None, group_combobox=None):
+        if not group_combobox: return
+        typed_text = group_combobox.get()
         response = GroupFinderController.recover_group(nombre=typed_text)
         if response['success'] and response['data']['grupos']:
             grupos = response['data']['grupos']
             self.group_id_map = {g['nombre']: g['id_grupo'] for g in grupos}
-            self.group_combobox['values'] = list(self.group_id_map.keys())
+            group_combobox['values'] = list(self.group_id_map.keys())
         else:
             self.group_id_map = {}
-            self.group_combobox['values'] = []
+            group_combobox['values'] = []
 
-    def assign_task_to_group(self):
-        selected_group = self.group_var.get()
-        group_id = self.group_id_map.get(selected_group)
-        if not group_id:
-            messagebox.showwarning("Sin Selección", "Por favor, selecciona un grupo válido de la lista.")
-            return
+    def load_group_members_data(self):
+        self.all_group_members_data.clear()
+        if self.selected_group_id:
+            members_with_roles = GroupController.get_all_members_with_rol(self.selected_group_id)
+            for alias, rol in members_with_roles: self.all_group_members_data[alias] = rol
 
-        # --- LÓGICA DE CONTROLADOR NECESARIA ---
-        # Aquí necesitarías un método en tu TaskController para hacer esta asignación.
-        # Por ejemplo: TaskController.assign_task_to_group(self.task_id, group_id)
-        messagebox.showinfo("Función en Desarrollo",
-                            f"Lógica para asignar la tarea {self.task_id} al grupo {group_id} no implementada en el backend.")
-        # Después de una asignación exitosa, se debería recargar la vista
-        # self._load_data_and_build_ui()
+    def add_member_to_assign_list(self, alias: str, is_fixed: bool):
+        if alias not in self.members_to_assign:
+            var = tk.BooleanVar(value=True)
+            self.members_to_assign[alias] = {'var': var, 'is_fixed': is_fixed}
 
-    # --- Acciones de Botones ---
+    def display_assigned_members(self):
+        parent = self.assign_group_widgets.get('members_display')
+        if not parent: return
+        for widget in parent.winfo_children(): widget.destroy()
+        for alias, data in self.members_to_assign.items():
+            cb = tk.Checkbutton(parent, text=alias, variable=data['var'], bg=parent.cget('bg'))
+            cb.pack(anchor='w')
+            if data['is_fixed']:
+                cb.config(state='disabled')
+
     def edit_task(self):
-        """Abre la vista de edición para la tarea actual."""
-        # La vista de edición puede necesitar la data en un formato específico
         task_data_for_edit = self.task_data['tarea']
+        # La vista de edición espera un formato diferente, lo adaptamos
+        task_data_for_edit['fecha'] = task_data_for_edit['fecha'].strftime('%d-%m-%Y')
         EditTaskView(self.root, self, task_data_for_edit)
 
     def delete_task(self):
-        """Maneja el borrado de una tarea."""
         if messagebox.askyesno("Confirmar", "¿Estás seguro de que quieres eliminar esta tarea?"):
             is_deleted, response = TaskController.event_delete_task(id_tarea=self.task_id)
             if is_deleted:
                 messagebox.showinfo("Éxito", response)
-                self.go_to_main_view()
+                MainView(self.root)
             else:
                 messagebox.showerror("Error", response)
 
     def go_to_main_view(self):
-        """Regresa a la vista principal y la refresca."""
         MainView(self.root)
+
+    def refresh_view(self):
+        TaskDetailView(self.root, self.main_view, task_id=self.task_id)
 
 class EditTaskView:
     def __init__(self, root: RootView, main_view, task_data: dict):

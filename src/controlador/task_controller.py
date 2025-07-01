@@ -307,6 +307,22 @@ class TaskController:
         return RegisterTask(tarea=response, id_grupo=id_grupo,miembro_disponible=miembros_id_disponible).register_task()
 
     @staticmethod
+    def event_add_group_task_exits(id_tarea, id_grupo, miembros_disponible: list[[str, bool]] or str = 'all'):
+        if (GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user(), id_grupo=id_grupo).name
+                not in ['master', 'editor']):
+            return False, "No se tienen los permisos para realizar estos cambios."
+
+        tarea = TaskServiceData.get_task(id_tarea)
+        if miembros_disponible != 'all':
+            miembros_id_disponible = [[UserServiceData.recover_id_user_for_alias(miembro), disponible]
+                                      if miembro != SessionManager.get_instance().usuario.Alias else [None, None]
+                                      for miembro, disponible in miembros_disponible]
+        else:
+            miembros_id_disponible = miembros_disponible
+        return (RegisterTask(tarea=tarea, id_grupo=id_grupo, miembro_disponible=miembros_id_disponible, anadir=True)
+                .register_task())
+
+    @staticmethod
     def event_archive_task(id_tarea)->dict:
         """Marca una tarea como archivada.
 
