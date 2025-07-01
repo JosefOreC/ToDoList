@@ -109,7 +109,8 @@ class GroupServiceData:
         response = (session.query(Grupo.Nombre).join(UsuarioGrupo, UsuarioGrupo.
                                           IDGrupo==Grupo.IDGrupo).
                                           filter(UsuarioGrupo.IDUsuario==id_usuario,
-                                          UsuarioGrupo.rol == Rol.editor or UsuarioGrupo.rol == Rol.master).all())
+                                                 or_(UsuarioGrupo.rol == Rol.editor,
+                                                     UsuarioGrupo.rol == Rol.master)).all())
         return [grupo[0] for grupo in response]
 
     @staticmethod

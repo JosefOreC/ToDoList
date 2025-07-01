@@ -30,4 +30,24 @@ class GroupFinderController:
             }
         }
 
+    @staticmethod
+    def recover_group_by_filters(nombre: str, rol: str):
+        try:
+            resultados = GroupFinder.search_for_group_by(id_usuario=SessionManager.get_id_user(), nombre=nombre,
+                                                         rol=rol)
+            success = True
+            response = f"Se recuperaron los grupos coincidentes con nombre:{nombre}, y rol {rol}."
+        except Exception as E:
+            resultados = None
+            success = False
+            response = f"No se recuperaron los grupos coincidentes con nombre:{nombre}, y rol {rol}.\n{E}"
+
+        return {
+            'success': success,
+            'response': response,
+            'data':{
+                'grupos': DataFormat.convert_to_dict_groups_data(resultados) if resultados else None
+            }
+        }
+
 

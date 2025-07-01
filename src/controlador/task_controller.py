@@ -62,6 +62,24 @@ class TaskController:
         }
 
     @staticmethod
+    def recover_all_data_task_to_view_details(id_tarea: int):
+        try:
+            task_data = TaskServiceData.get_task_data_for_edit(id_usuario=SessionManager.get_id_user(),
+                                                               id_tarea=id_tarea)
+            success = True,
+            response = "Se recuperaron los datos de la tarea"
+        except Exception as E:
+            task_data = None,
+            success = False,
+            response = f"No se pudieron recuperar los datos de la tarea. \n{E}"
+
+        return {
+            'success': success,
+            'response': response,
+            'data': DataFormat.convert_to_dict_tarea_to_edit(task_data) if task_data else task_data
+        }
+
+    @staticmethod
     def recover_task_date(fecha: datetime) -> dict['success': bool, 'response':str, 'data':dict['tareas':list]]:
         try:
             resultados = TaskServiceData.get_tasks_user_list_date(SessionManager.get_id_user(), fecha_inicio=fecha)
@@ -377,6 +395,19 @@ class TaskController:
             'success': success,
             'response': response
         }
+
+    @staticmethod
+    def add_group_to_tarea(id_tarea, id_grupo):
+        if GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user(), id_grupo=id_grupo) == Rol.miembro:
+            return {
+                'success': False,
+                'response': 'No se tienen los permisos para editar esta tarea.'
+            }
+
+
+
+
+
 
 
 

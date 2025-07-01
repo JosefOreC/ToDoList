@@ -32,7 +32,9 @@ class TaskFinderController:
     }
 
     @staticmethod
-    def recover_task(id_grupo=None, nombre=None, realizado=None, fecha_ini=None, fecha_fin=None, archivado=False):
+    def recover_task(id_grupo=None, nombre=None, realizado=None, fecha_ini=None, fecha_fin=None, archivado=False
+                     , prioridad: list[str] | None = None):
+
         argumentos = {'id_usuario': SessionManager.get_id_user()}
         funcion = ''
 
@@ -59,15 +61,10 @@ class TaskFinderController:
 
         argumentos['archivado']=archivado
 
-        if funcion == '':
-            return {
-                'success': True,
-                'response': "No hay argumentos de busqueda",
-                'data':{
-                    'tareas':None
-                }
-            }
+        if prioridad:
+            argumentos['prioridad']=prioridad
 
+        """
         try:
             resultados = TaskFinderController.__funtion_to_recover.get(funcion)(**argumentos)
             success = True
@@ -84,3 +81,23 @@ class TaskFinderController:
                 'tareas': DataFormat.convert_to_dict_task_data(resultados) if resultados else None
             }
         }
+        """
+
+        try:
+            resultados = TaskFinder.search_for_task_by(**argumentos)
+            success = True
+            response = "Se recuperaron los datos de las tareas."
+        except Exception as E:
+            resultados = None
+            success = False
+            response = f"No se pudieron recuperar los datos.\n{E}"
+
+        return {
+            'success': success,
+            'response': response,
+            'data': {
+                'tareas': DataFormat.convert_to_dict_task_data(resultados) if resultados else None
+            }
+        }
+
+

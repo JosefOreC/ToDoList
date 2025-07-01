@@ -2,7 +2,7 @@
 Clase que controla la entidad tarea y relacionados
 desde la base de datos CRUD.
 """
-
+from imaplib import InternalDate
 
 from src.modelo.database_management.base.declarative_base import session
 from src.modelo.entities.modelo import UsuarioTarea, Tarea, Grupo
@@ -189,7 +189,11 @@ class TaskServiceData:
                     UsuarioTarea.IDUsuario == usuario_id
         )).order_by(Tarea.Prioridad.asc()).all()
 
-
+    @staticmethod
+    def get_task_data_for_edit(id_tarea: int, id_usuario: int):
+        return (session.query(Tarea, UsuarioTarea).join(UsuarioTarea, UsuarioTarea.IDTarea==Tarea.IDTarea)
+                .filter(Tarea.IDTarea==id_tarea, UsuarioTarea.IDUsuario==id_usuario, Tarea.Activo==True)
+                .first())
 
 
 

@@ -10,6 +10,7 @@ from src.controlador.group_finder_controller import GroupFinderController
 from src.controlador.task_finder_controller import TaskFinderController as TFC
 from src.controlador.task_finder_controller import  TaskFinder as TF
 from src.controlador.login_controller import LoginController
+from src.modelo.service.user_service.user_finder import UserFinder as UF
 
 if __name__ == '__main__':
 

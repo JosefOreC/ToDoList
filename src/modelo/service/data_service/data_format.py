@@ -7,9 +7,12 @@ con interfaces de usuario o APIs. Incluye integración con servicios de grupos
 y manejo de sesiones.
 """
 
+
 from src.modelo.entities.tarea import Tarea
 from src.modelo.entities.grupo import Grupo
 from datetime import datetime, date
+
+from src.modelo.entities.usuario_tarea import UsuarioTarea
 from src.modelo.service.group_service.group_service_data import GroupServiceData
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.entities.rol import Rol
@@ -144,6 +147,39 @@ class DataFormat:
             response.append(summary)
 
         return response
+
+    @staticmethod
+    def convert_to_dict_tarea_to_edit(tarea: list[Tarea, UsuarioTarea] or tuple):
+        task: Tarea
+        user_manag: UsuarioTarea
+        task, user_manag = tarea
+        miembro: UsuarioTarea
+        return {
+            'tarea':{
+                'id_tarea': task.IDTarea,
+                'nombre': task.Nombre,
+                'detalle': task.Detalle,
+                'fecha': task.Fecha_programada,
+                'prioridad': DataFormat.prioridades.get(task.Prioridad),
+                'type_check': task.type_check #False: Individual, True: Grupal
+            },
+            'user':{
+                'rol': user_manag.grupo.Nombre if user_manag.IDGrupo else Rol.master.name,
+                'check': user_manag.Realizado,
+                'archivado': user_manag.Archivado,
+                'disponible': user_manag.Disponible, #Checkable o editable
+            },
+            'miembros':
+                [{'alias': miembro.usuario.Alias,
+                  'editable': miembro.Disponible,
+                  'rol': GroupServiceData.get_rol_in_group(id_grupo= miembro.IDGrupo, id_usuario=miembro.IDUsuario).name
+                        if GroupServiceData.is_user_in_group(id_grupo= miembro.IDGrupo, id_usuario=miembro.IDUsuario)
+                        else 'Fuera del grupo',
+                  'check': miembro.Realizado
+                  } for miembro in task.tarea_usuarios] if user_manag.IDGrupo else None
+
+
+        }
 
     @staticmethod
     def convert_to_dict_task_data_groups(tareas: list[Tarea, Rol]):

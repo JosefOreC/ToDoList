@@ -538,11 +538,13 @@ class MainView:
         if self.current_page < self.total_pages:
             self.current_page += 1
             self.display_current_page()
+            self.update_pagination_controls() # <-- CORRECCIÓN
 
     def prev_page(self):
         if self.current_page > 1:
             self.current_page -= 1
             self.display_current_page()
+            self.update_pagination_controls()
 
     def insert_task_view(self, tarea: dict):
         task_id = tarea.get('id_tarea')
@@ -550,6 +552,7 @@ class MainView:
                               padx=10, pady=10)
         task_frame.pack(fill='x', pady=5, expand=True)
 
+        # --- Frame de información (sin cambios) ---
         info_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
         info_frame.pack(side='left', fill='x', expand=True)
         tk.Label(info_frame, text=tarea.get('nombre'), font=("Helvetica", 14, "bold"), bg=info_frame.cget('bg'),
@@ -559,56 +562,51 @@ class MainView:
         if tarea.get('grupo'):
             tk.Label(info_frame, text=f"Grupo: {tarea.get('grupo')}", font=("Helvetica", 10), bg=info_frame.cget('bg'),
                      fg='#566573', anchor='w').pack(fill='x', pady=(5, 0))
-
         if self.recuperar == 'archivadas':
             tk.Label(info_frame, text=f"Fecha: {tarea.get('fecha')}", font=("Helvetica", 10), bg=info_frame.cget('bg'),
                      fg='#566573', anchor='w').pack(fill='y', pady=(5, 0))
 
+        # --- MODIFICADO: Panel de acciones simplificado ---
         actions_frame = tk.Frame(task_frame, bg=task_frame.cget('bg'))
-        actions_frame.pack(side='right', fill='y', padx=(10, 0))
+        actions_frame.pack(side='right', padx=(10, 0))
 
-        disponible, es_de_grupo, rol = tarea.get('disponible', True), tarea.get('is_in_group', False), tarea.get('rol',
-                                                                                                                 None)
-        can_edit = disponible and (not es_de_grupo or rol not in ['miembro'])
-        can_delete = not es_de_grupo or rol not in ['miembro', 'editor']
+        pack_info_buttons = {'side': 'left', 'padx': 3}
+
+        # 1. Botón Check
         realizado = tarea.get('realizado', False)
-
         btn_check = tk.Button(actions_frame, text='✔' if realizado else '✖',
                               bg=self.root.COLOR_SUCCESS if realizado else self.root.COLOR_DANGER,
                               fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat', width=3,
                               command=lambda id_t=task_id: self.btn_check_task(id_tarea=id_t), cursor="hand2")
-        btn_check.pack(side='left', padx=2)
+        btn_check.pack(**pack_info_buttons)
 
+        # 2. Botón Detalle (ahora lleva a la nueva vista)
         btn_details = tk.Button(actions_frame, text='Detalle', bg='#17A2B8', fg=self.root.COLOR_TEXT_LIGHT,
                                 font=self.root.FONT_BUTTON, relief='flat',
-                                command=lambda t=tarea: self.show_task_details(tarea=t), cursor="hand2")
-        btn_details.pack(side='left', padx=2)
+                                command=lambda id_t=task_id: self.go_to_task_details(id_t), cursor="hand2")
+        btn_details.pack(**pack_info_buttons)
 
-        if can_edit:
-            btn_edit = tk.Button(actions_frame, text='Editar', bg='#6C757D', fg=self.root.COLOR_TEXT_LIGHT,
-                                 font=self.root.FONT_BUTTON, relief='flat',
-                                 command=lambda id_t=task_id: self.btn_edit_task(id_tarea=id_t))
-            btn_edit.config(state='normal' if can_edit else 'disabled', cursor="hand2" if can_edit else "arrow")
-            btn_edit.pack(side='left', padx=2)
+        # 3. Botón Archivar
+        btn_archive = tk.Button(actions_frame, text='Archivar' if not tarea.get('archivado') else 'Desarchivar',
+                                bg='#5D6D7E' if not tarea.get('archivado') else self.root.COLOR_SUCCESS,
+                                fg=self.root.COLOR_TEXT_LIGHT, font=self.root.FONT_BUTTON, relief='flat',
+                                command=lambda id_t=task_id: (self.btn_archive_task(id_tarea=id_t) if not tarea.get(
+                                    'archivado') else self.btn_unarchivate_task(id_t)))
+        btn_archive.pack(**pack_info_buttons)
 
-        btn_archive = tk.Button(actions_frame, text='Archivar' if not tarea.get('archivado') else 'Desarchivar'
-                                , bg='#5D6D7E' if not tarea.get('archivado') else
-            self.root.COLOR_SUCCESS, fg=self.root.COLOR_TEXT_LIGHT,
-                                font=self.root.FONT_BUTTON, relief='flat',
-                                command=lambda id_t=task_id: (self.btn_archive_task(id_tarea=id_t)
-                                                              if not tarea.get('archivado')
-                                                              else self.btn_unarchivate_task(id_t)))
-        btn_archive.config(state='normal', cursor="hand2")
-        btn_archive.pack(side='left', padx=2)
+        # 4. Botón Eliminar
+        can_delete = not tarea.get('is_in_group', False) or tarea.get('rol', '') not in ['miembro', 'editor']
+        if can_delete:
+            btn_delete = tk.Button(actions_frame, text='Eliminar', bg=self.root.COLOR_DANGER,
+                                   fg=self.root.COLOR_TEXT_LIGHT,
+                                   font=self.root.FONT_BUTTON, relief='flat',
+                                   command=lambda id_t=task_id: self.btn_delete_task(id_tarea=id_t))
+            btn_delete.pack(**pack_info_buttons)
 
-        if not can_delete:
-            return
-
-        btn_delete = tk.Button(actions_frame, text='Eliminar', bg=self.root.COLOR_DANGER, fg=self.root.COLOR_TEXT_LIGHT,
-                               font=self.root.FONT_BUTTON, relief='flat',
-                               command=lambda id_t=task_id: self.btn_delete_task(id_tarea=id_t))
-        btn_delete.config(state='normal' if can_delete else 'disabled', cursor="hand2" if can_delete else "arrow")
-        btn_delete.pack(side='left', padx=2)
+    # --- NUEVO MÉTODO en MainView ---
+    def go_to_task_details(self, task_id: int):
+        """Navega a la nueva vista de detalles de la tarea."""
+        TaskDetailView(self.root, self, task_id)
 
     def find_task_by_id(self, task_id):
         return next((task for task in self.todas_las_tareas if task.get('id_tarea') == task_id), None)
@@ -698,6 +696,211 @@ class MainView:
     def refresh_view(self):
         self.setup_task_display()
 
+
+class TaskDetailView:
+    """
+    Muestra los detalles completos de una tarea y permite acciones
+    contextuales (asignar a grupo, ver miembros, etc.).
+    """
+
+    def __init__(self, root: 'RootView', main_view: 'MainView', task_id: int):
+        self.root = root
+        self.main_view = main_view
+        self.task_id = task_id
+
+        self.task_data = None
+        self.group_assignment_frame = None
+        self.group_var = tk.StringVar()
+        self.group_id_map = {}
+
+        self.root.limpiar_componentes()
+        self._load_data_and_build_ui()
+
+    def _load_data_and_build_ui(self):
+        """Carga los datos de la tarea y construye la UI correspondiente."""
+        response = TaskController.recover_all_data_task_to_view_details(self.task_id)
+
+        if not response['success']:
+            messagebox.showerror("Error", response['response'])
+            self.go_to_main_view()
+            return
+
+        self.task_data = response['data']
+
+        # Decide qué vista construir basado en si la tarea es de grupo
+        if self.task_data.get('miembros'):
+            self._build_group_task_view()
+        else:
+            self._build_individual_task_view()
+
+    def _build_base_frame(self):
+        """Crea el contenedor principal y el encabezado común."""
+        main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
+        main_frame.pack(fill='both', expand=True)
+
+        header_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
+        header_frame.pack(fill='x', pady=(0, 15))
+
+        tk.Label(header_frame, text=self.task_data['tarea']['nombre'], font=self.root.FONT_TITLE,
+                 bg=header_frame.cget('bg'), wraplength=1000, justify='left').pack(anchor='w')
+
+        fecha_str = self.task_data['tarea']['fecha'].strftime('%d-%m-%Y')
+        details_text = f"Fecha: {fecha_str} | Prioridad: {self.task_data['tarea']['prioridad']}"
+        tk.Label(header_frame, text=details_text, font=("Helvetica", 12, "italic"), fg='#566573',
+                 bg=header_frame.cget('bg')).pack(anchor='w')
+
+        return main_frame
+
+    def _build_individual_task_view(self):
+        """Construye la UI para una tarea que no pertenece a un grupo."""
+        main_frame = self._build_base_frame()
+
+        tk.Label(main_frame, text="Detalle:", font=self.root.FONT_LABEL, bg=main_frame.cget('bg')).pack(anchor='w',
+                                                                                                        pady=(10, 0))
+        tk.Label(main_frame, text=self.task_data['tarea']['detalle'] or "Sin detalles.", font=self.root.FONT_BODY,
+                 bg=self.root.COLOR_FRAME, wraplength=1000, justify='left', padx=5, pady=5).pack(fill='x', anchor='w')
+
+        # --- Sección para asignar a un grupo ---
+        self.group_assignment_frame = tk.Frame(main_frame, bg=main_frame.cget('bg'))
+        # Se empaquetará más tarde al hacer clic en el botón
+
+        assign_button = tk.Button(main_frame, text="➕ Asignar a un Grupo", command=self.show_group_assignment_ui,
+                                  font=self.root.FONT_BUTTON, bg=self.root.COLOR_SUCCESS, fg='white')
+        assign_button.pack(pady=20)
+
+        # Contenido del frame de asignación (inicialmente oculto)
+        tk.Label(self.group_assignment_frame, text="Buscar y seleccionar grupo:", font=self.root.FONT_LABEL,
+                 bg=main_frame.cget('bg')).pack(anchor='w')
+        self.group_combobox = ttk.Combobox(self.group_assignment_frame, textvariable=self.group_var,
+                                           font=self.root.FONT_BODY, width=40)
+        self.group_combobox.pack(side='left', padx=(0, 10))
+        self.group_combobox.bind('<KeyRelease>', self.update_group_suggestions)
+        tk.Button(self.group_assignment_frame, text="Guardar Asignación", command=self.assign_task_to_group).pack(
+            side='left')
+
+        tk.Button(main_frame, text="← Volver", command=self.go_to_main_view).pack(side='bottom', pady=10)
+
+    def _build_group_task_view(self):
+        """Construye la UI para una tarea que ya pertenece a un grupo."""
+        main_frame = self._build_base_frame()
+
+        paned_window = ttk.PanedWindow(main_frame, orient='horizontal')
+        paned_window.pack(fill='both', expand=True, pady=10)
+
+        # Panel izquierdo: Detalles y Acciones
+        left_panel = tk.Frame(paned_window, bg=main_frame.cget('bg'))
+        tk.Label(left_panel, text="Detalle de la Tarea:", font=self.root.FONT_LABEL, bg=left_panel.cget('bg')).pack(
+            anchor='w')
+        tk.Label(left_panel, text=self.task_data['tarea']['detalle'] or "Sin detalles.", font=self.root.FONT_BODY,
+                 bg=self.root.COLOR_FRAME, wraplength=600, justify='left', padx=5, pady=5).pack(fill='both',
+                                                                                                expand=True, anchor='n')
+
+        # Panel de Acciones para la tarea
+        self.create_group_task_actions(left_panel)
+        paned_window.add(left_panel, weight=2)
+
+        # Panel derecho: Lista de Miembros
+        right_panel = tk.Frame(paned_window, bg=main_frame.cget('bg'))
+        self.create_members_list(right_panel)
+        paned_window.add(right_panel, weight=1)
+
+        tk.Button(main_frame, text="← Volver", command=self.go_to_main_view).pack(side='bottom', pady=10)
+
+    def create_group_task_actions(self, parent):
+        actions_frame = tk.Frame(parent, bg=parent.cget('bg'), pady=10)
+        actions_frame.pack(fill='x')
+        tk.Label(actions_frame, text="Acciones de Tarea", font=self.root.FONT_LABEL, bg=parent.cget('bg')).pack(
+            anchor='w', pady=(10, 5))
+
+        user_rol = self.task_data['user']['rol']
+
+        if user_rol in ['master', 'editor']:
+            tk.Button(actions_frame, text="Editar Tarea", command=self.edit_task).pack(fill='x', pady=2)
+            tk.Button(actions_frame, text="Agregar/Quitar Usuarios (Próximamente)", state='disabled').pack(fill='x',
+                                                                                                           pady=2)
+            tk.Button(actions_frame, text="Cambiar Tipo de Check (Próximamente)", state='disabled').pack(fill='x',
+                                                                                                         pady=2)
+
+        if user_rol == 'master':
+            tk.Button(actions_frame, text="Eliminar Tarea del Grupo", command=self.delete_task,
+                      bg=self.root.COLOR_DANGER, fg='white').pack(fill='x', pady=2)
+
+    def create_members_list(self, parent):
+        tk.Label(parent, text="Estado de Miembros", font=self.root.FONT_LABEL, bg=parent.cget('bg')).pack(anchor='w')
+        canvas = tk.Canvas(parent, bg=self.root.COLOR_FRAME, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        list_frame = tk.Frame(canvas, bg=self.root.COLOR_FRAME)
+
+        list_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=list_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        for miembro in self.task_data['miembros']:
+            item_frame = tk.Frame(list_frame, bg=list_frame.cget('bg'), padx=5, pady=3)
+            item_frame.pack(fill='x')
+
+            check_icon = "✔" if miembro['check'] else "✖"
+            check_color = self.root.COLOR_SUCCESS if miembro['check'] else self.root.COLOR_DANGER
+            tk.Label(item_frame, text=check_icon, font=("Helvetica", 12, "bold"), fg=check_color,
+                     bg=item_frame.cget('bg')).pack(side='left')
+            tk.Label(item_frame, text=miembro['alias'], font=self.root.FONT_BODY, bg=item_frame.cget('bg')).pack(
+                side='left', padx=5)
+
+    def show_group_assignment_ui(self):
+        """Muestra la sección para asignar la tarea a un grupo."""
+        if self.group_assignment_frame:
+            self.group_assignment_frame.pack(pady=10, fill='x')
+            self.update_group_suggestions()
+
+    def update_group_suggestions(self, event=None):
+        typed_text = self.group_var.get()
+        response = GroupFinderController.recover_group(nombre=typed_text)
+        if response['success'] and response['data']['grupos']:
+            grupos = response['data']['grupos']
+            self.group_id_map = {g['nombre']: g['id_grupo'] for g in grupos}
+            self.group_combobox['values'] = list(self.group_id_map.keys())
+        else:
+            self.group_id_map = {}
+            self.group_combobox['values'] = []
+
+    def assign_task_to_group(self):
+        selected_group = self.group_var.get()
+        group_id = self.group_id_map.get(selected_group)
+        if not group_id:
+            messagebox.showwarning("Sin Selección", "Por favor, selecciona un grupo válido de la lista.")
+            return
+
+        # --- LÓGICA DE CONTROLADOR NECESARIA ---
+        # Aquí necesitarías un método en tu TaskController para hacer esta asignación.
+        # Por ejemplo: TaskController.assign_task_to_group(self.task_id, group_id)
+        messagebox.showinfo("Función en Desarrollo",
+                            f"Lógica para asignar la tarea {self.task_id} al grupo {group_id} no implementada en el backend.")
+        # Después de una asignación exitosa, se debería recargar la vista
+        # self._load_data_and_build_ui()
+
+    # --- Acciones de Botones ---
+    def edit_task(self):
+        """Abre la vista de edición para la tarea actual."""
+        # La vista de edición puede necesitar la data en un formato específico
+        task_data_for_edit = self.task_data['tarea']
+        EditTaskView(self.root, self, task_data_for_edit)
+
+    def delete_task(self):
+        """Maneja el borrado de una tarea."""
+        if messagebox.askyesno("Confirmar", "¿Estás seguro de que quieres eliminar esta tarea?"):
+            is_deleted, response = TaskController.event_delete_task(id_tarea=self.task_id)
+            if is_deleted:
+                messagebox.showinfo("Éxito", response)
+                self.go_to_main_view()
+            else:
+                messagebox.showerror("Error", response)
+
+    def go_to_main_view(self):
+        """Regresa a la vista principal y la refresca."""
+        MainView(self.root)
 
 class EditTaskView:
     def __init__(self, root: RootView, main_view, task_data: dict):
@@ -1247,16 +1450,30 @@ class RegisterTareaUserView:
 class ManageGroupsView:
     def __init__(self, root: 'RootView'):
         self.root = root
-        self.todos_los_grupos, self.current_page, self.groups_per_page, self.total_pages = [], 1, 20, 1
-        self.groups_frame, self.pagination_frame = None, None
+
+        # --- Atributos de estado ---
+        self.todos_los_grupos = []
+        self.current_page = 1
+        self.groups_per_page = 10  # Aumentado para mejor visualización
+        self.total_pages = 1
+        self.groups_frame = None
+        self.pagination_frame = None
+
+        # --- NUEVO: Variables para los filtros ---
+        self.name_filter_var = tk.StringVar()
+        self.role_filter_var = tk.StringVar(value="Todos")
+
         self.create_manage_groups_interface()
+        self.execute_search()  # Carga inicial de todos los grupos
 
     def create_manage_groups_interface(self):
         self.root.limpiar_componentes()
         content_frame = tk.Frame(self.root.root, bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
         content_frame.pack(fill='both', expand=True)
+
+        # --- Header (sin cambios) ---
         header_frame = tk.Frame(content_frame, bg=content_frame.cget('bg'))
-        header_frame.pack(fill='x', pady=(0, 20))
+        header_frame.pack(fill='x', pady=(0, 10))
         tk.Label(header_frame, text="Gestionar Grupos", font=self.root.FONT_TITLE, bg=header_frame.cget('bg')).pack(
             side='left')
         self.root.create_button(container=header_frame, name='btnBackToMain', funcion=self.go_to_main_view,
@@ -1265,36 +1482,80 @@ class ManageGroupsView:
         self.root.create_button(container=header_frame, name='btnCreateGroup', funcion=self.go_to_create_group,
                                 text='✚ Nuevo Grupo', bg=self.root.COLOR_SUCCESS,
                                 pack_info={'side': 'right', 'padx': 5, 'ipady': 3, 'ipadx': 10})
+
+        # --- NUEVO: Frame de Filtros ---
+        filters_frame = tk.Frame(content_frame, bg=self.root.COLOR_FRAME, padx=10, pady=10)
+        filters_frame.pack(fill='x', pady=10)
+
+        # Filtro por Nombre
+        tk.Label(filters_frame, text="Buscar por Nombre:", font=self.root.FONT_LABEL, bg=filters_frame.cget('bg')).pack(
+            side='left', padx=(0, 5))
+        name_entry = tk.Entry(filters_frame, textvariable=self.name_filter_var, font=self.root.FONT_BODY, width=30)
+        name_entry.pack(side='left', padx=5)
+
+        # Filtro por Rol
+        tk.Label(filters_frame, text="Filtrar por Rol:", font=self.root.FONT_LABEL, bg=filters_frame.cget('bg')).pack(
+            side='left', padx=(15, 5))
+        role_combo = ttk.Combobox(filters_frame, textvariable=self.role_filter_var,
+                                  values=["Todos", "master", "editor", "miembro"],
+                                  state='readonly', font=self.root.FONT_BODY)
+        role_combo.pack(side='left', padx=5)
+
+        # Botones de Acción para Filtros
+        tk.Button(filters_frame, text="Buscar", command=self.execute_search, bg=self.root.COLOR_PRIMARY,
+                  fg='white').pack(side='left', padx=(15, 5))
+        tk.Button(filters_frame, text="Limpiar", command=self.clear_filters).pack(side='left')
+
+        # --- Frame de Resultados (sin cambios en su creación) ---
         self.groups_frame = tk.Frame(content_frame, bg=content_frame.cget('bg'))
         self.groups_frame.pack(fill='both', expand=True)
         self.pagination_frame = tk.Frame(content_frame, bg=content_frame.cget('bg'))
         self.pagination_frame.pack(fill='x', pady=(10, 0))
-        self.setup_groups_display()
 
-    def setup_groups_display(self):
-        request = GroupController.get_all_groups_of_session_manager()
+    def execute_search(self):
+        """
+        Ejecuta la búsqueda con los filtros actuales y actualiza la vista.
+        """
+        nombre = self.name_filter_var.get().strip()
+        rol = self.role_filter_var.get()
+
+        # Si el rol es "Todos", se envía None al controlador para no filtrar por rol
+        rol_a_buscar = rol if rol != "Todos" else None
+
+        request = GroupFinderController.recover_group_by_filters(nombre=nombre, rol=rol_a_buscar)
+
         if not request['success']:
             messagebox.showerror(title="Error", message=request['response'])
             self.todos_los_grupos = []
         else:
             self.todos_los_grupos = request['data']['grupos'] or []
-        num_groups = len(self.todos_los_grupos)
-        self.total_pages = (num_groups + self.groups_per_page - 1) // self.groups_per_page or 1
+
+        # Reinicia la paginación y muestra los resultados
         self.current_page = 1
+        self.total_pages = (len(self.todos_los_grupos) + self.groups_per_page - 1) // self.groups_per_page or 1
         self.display_current_page()
-        self.setup_pagination_controls()
+
+    def clear_filters(self):
+        """Limpia los campos de filtro y ejecuta una búsqueda para mostrar todos los grupos."""
+        self.name_filter_var.set("")
+        self.role_filter_var.set("Todos")
+        self.execute_search()
 
     def display_current_page(self):
         for widget in self.groups_frame.winfo_children(): widget.destroy()
+
         if not self.todos_los_grupos:
             self.root.create_label(container=self.groups_frame, name='lblNoGroups',
-                                   text='No perteneces a ningún grupo.', fg='#6C757D',
+                                   text='No se encontraron grupos con esos criterios.', fg='#6C757D',
                                    font_style=("Helvetica", 14, "italic"), pack_info={'pady': 20})
-            if self.pagination_frame: self.pagination_frame.pack_forget()
+            self.setup_pagination_controls()  # Limpia la paginación
             return
 
-        headers, col_weights = ["Nombre", "Descripción", "Rol", "Acciones"], [2, 5, 2, 3]
-        for i, weight in enumerate(col_weights): self.groups_frame.grid_columnconfigure(i, weight=weight)
+        headers, col_weights = ["Nombre", "Descripción", "Mi Rol", "Acciones"], [2, 5, 1, 2]
+        self.groups_frame.grid_columnconfigure(0, weight=col_weights[0])
+        self.groups_frame.grid_columnconfigure(1, weight=col_weights[1])
+        self.groups_frame.grid_columnconfigure(2, weight=col_weights[2])
+        self.groups_frame.grid_columnconfigure(3, weight=col_weights[3])
 
         header_bg = self.root.COLOR_FRAME
         for i, header in enumerate(headers):
@@ -1304,9 +1565,15 @@ class ManageGroupsView:
 
         start_index = (self.current_page - 1) * self.groups_per_page
         groups_to_display = self.todos_los_grupos[start_index: start_index + self.groups_per_page]
+
         for i, group_data in enumerate(groups_to_display):
+            # Asumo que el rol del usuario ahora vendrá en el diccionario del grupo
+            # Si no es así, esta línea necesitaría ajustarse.
             self.insert_group_row(group=group_data, row_index=i + 1)
-        self.update_pagination_controls()
+
+        self.setup_pagination_controls()
+
+    # --- El resto de los métodos se mantienen casi igual, solo se adaptan a la nueva lógica de recarga ---
 
     def insert_group_row(self, group: dict, row_index: int):
         bg_color = self.root.COLOR_BACKGROUND if row_index % 2 != 0 else self.root.COLOR_FRAME
@@ -1316,10 +1583,10 @@ class ManageGroupsView:
                  justify='left', padx=5, pady=5).grid(row=row_index, column=1, sticky='nsew')
         tk.Label(self.groups_frame, text=group.get('rol_usuario', 'N/A').capitalize(), bg=bg_color, anchor='w', padx=5,
                  pady=5).grid(row=row_index, column=2, sticky='nsew')
-        actions_frame = tk.Frame(self.groups_frame, bg=bg_color)
-        actions_frame.grid(row=row_index, column=3, sticky='nsew', padx=5, pady=5)
 
-        # --- CORRECCIÓN: Botón "Gestionar" habilitado y funcional ---
+        actions_frame = tk.Frame(self.groups_frame, bg=bg_color)
+        actions_frame.grid(row=row_index, column=3, sticky='nsew', padx=5, pady=2)
+
         tk.Button(actions_frame, text="Gestionar", font=("Helvetica", 9),
                   command=lambda id_g=group.get('id_grupo'): self.go_to_view_group(group_id=id_g)).pack(side='left',
                                                                                                         padx=2)
@@ -1327,35 +1594,23 @@ class ManageGroupsView:
                   command=lambda g=group: self.leave_group_flow(g)).pack(side='left', padx=2)
 
     def leave_group_flow(self, group_data: dict):
-        """ Inicia el flujo para salir de un grupo, diferenciando por rol. """
         role = group_data.get('rol_usuario')
         group_id = group_data.get('id_grupo')
-
         if role == 'master':
-            # Si es master, necesita seleccionar un sucesor.
-            # Necesitamos obtener la lista completa de miembros para esto.
             request = GroupController.get_data_to_view(id_grupo=group_id)
             if not request['success']:
-                messagebox.showerror("Error",
-                                     f"No se pudo obtener la lista de miembros para el grupo "
-                                     f"'{group_data.get('nombre')}'.")
+                messagebox.showerror("Error", f"No se pudo obtener la lista de miembros.")
                 return
             members = request['data'].get('miembros', [])
             SelectNewMasterView(self.root, self, group_id, members)
         else:
-            # Si no es master, solo necesita confirmar.
             LeaveGroupConfirmationView(self.root, self, group_id)
 
     def setup_pagination_controls(self):
         for widget in self.pagination_frame.winfo_children(): widget.destroy()
-        if not self.todos_los_grupos:
-            if hasattr(self, 'prev_button'):
-                self.prev_button.pack_forget()
-                self.page_label.pack_forget()
-                self.next_button.pack_forget()
+        if self.total_pages <= 1:
             return
 
-        self.pagination_frame.pack(fill='x', pady=(10, 0))  # Asegurarse de que sea visible
         self.prev_button = tk.Button(self.pagination_frame, text="◀ Anterior", command=self.prev_page,
                                      font=self.root.FONT_BUTTON, relief='flat', cursor="hand2")
         self.prev_button.pack(side='left', padx=10)
@@ -1372,7 +1627,6 @@ class ManageGroupsView:
         self.page_label.config(text=f"Página {self.current_page} de {self.total_pages}")
         self.prev_button.config(state='normal' if self.current_page > 1 else 'disabled')
         self.next_button.config(state='normal' if self.current_page < self.total_pages else 'disabled')
-        pass
 
     def next_page(self):
         if self.current_page < self.total_pages:
@@ -2593,8 +2847,8 @@ class PasswordRecoveryStep3View(Toplevel):
 
 class TaskSearchView:
     """
-    Vista dedicada a la búsqueda y filtrado de tareas con una disposición
-    de filtros en la parte superior y resultados en la parte inferior.
+    Vista de búsqueda de tareas rediseñada con filtros de selección múltiple
+    para prioridad y paginación robusta.
     """
 
     def __init__(self, root: 'RootView'):
@@ -2607,13 +2861,20 @@ class TaskSearchView:
         self.end_date = None
         self.status_var = tk.StringVar(value="Todos")
         self.group_var = tk.StringVar()
-        self.archived_var = tk.StringVar(value="Activas")  # Corregido a StringVar
+        self.archived_var = tk.StringVar(value="Activas")
         self.group_id_map = {}
+
+        # --- Nuevo: Variables para los checkboxes de prioridad ---
+        self.priority_vars = {
+            1: tk.BooleanVar(), 2: tk.BooleanVar(), 3: tk.BooleanVar(),
+            4: tk.BooleanVar(), 5: tk.BooleanVar()
+        }
+        self.priority_map = {1: "Muy Alta", 2: "Alta", 3: "Media", 4: "Baja", 5: "Muy Baja"}
 
         # --- Atributos para resultados y paginación ---
         self.search_results = []
         self.current_page = 1
-        self.tasks_per_page = 10
+        self.tasks_per_page = 10  # Se mantiene la paginación
         self.total_pages = 1
 
         # --- Widgets referenciados ---
@@ -2625,20 +2886,18 @@ class TaskSearchView:
 
         self.create_search_interface()
         self.set_default_dates()
-        self.update_group_suggestions()  # Carga inicial de grupos
+        self.update_group_suggestions()
         self.execute_search()
 
     def create_search_interface(self):
-        # --- Contenedor principal para la nueva disposición ---
         main_frame = tk.Frame(self.root.root, bg=self.root.COLOR_BACKGROUND)
         main_frame.pack(fill='both', expand=True, padx=20, pady=20)
 
-        # 1. Panel de Filtros (Arriba)
-        filters_container = tk.Frame(main_frame, bg=self.root.COLOR_FRAME, padx=15, pady=15)
+        filters_container = tk.Frame(main_frame, bg=self.root.COLOR_FRAME, padx=15, pady=15, relief='solid',
+                                     borderwidth=1)
         filters_container.pack(side='top', fill='x', pady=(0, 10))
         self.create_filters_frame(filters_container)
 
-        # 2. Panel de Resultados (Abajo)
         results_container = tk.Frame(main_frame, bg=self.root.COLOR_BACKGROUND)
         results_container.pack(side='top', fill='both', expand=True)
         self.create_results_frame(results_container)
@@ -2647,33 +2906,120 @@ class TaskSearchView:
         tk.Label(parent, text="Filtros de Búsqueda", font=self.root.FONT_TITLE, bg=parent.cget('bg')).pack(pady=(0, 15),
                                                                                                            anchor='w')
 
-        # Frame para alinear los filtros horizontalmente
         filters_row = tk.Frame(parent, bg=parent.cget('bg'))
-        filters_row.pack(fill='x')
+        filters_row.pack(fill='x', expand=True)
 
-        # --- Creación de cada sección de filtro ---
         self.create_name_filter(filters_row)
         self.create_date_filter(filters_row, "Desde:", 'start')
         self.create_date_filter(filters_row, "Hasta:", 'end')
-        self.create_status_filter(filters_row)
+        self.create_priority_filter(filters_row)  # Nuevo filtro
         self.create_group_filter(filters_row)
+        self.create_status_filter(filters_row)
         self.create_archived_filter(filters_row)
 
-        # --- Botones de acción ---
         action_frame = tk.Frame(parent, bg=parent.cget('bg'))
-        action_frame.pack(fill='x', pady=(15, 0))
+        action_frame.pack(fill='x', pady=(20, 0))
         tk.Button(action_frame, text="Buscar Tareas", command=self.execute_search, bg=self.root.COLOR_PRIMARY,
                   fg='white', font=self.root.FONT_BUTTON).pack(side='left', ipady=5, ipadx=20)
         tk.Button(action_frame, text="Volver al Inicio", command=self.go_to_main, bg='#6C757D', fg='white',
                   font=self.root.FONT_BUTTON).pack(side='right', ipady=5, ipadx=20)
 
-    # --- Métodos para crear cada sección de filtro ---
+    # --- Creación de cada sección de filtro ---
+
+    def create_priority_filter(self, parent):
+        """Crea el nuevo filtro de prioridades con checkboxes."""
+        frame = tk.Frame(parent, bg=parent.cget('bg'))
+        frame.pack(side='left', padx=10, anchor='n')
+        tk.Label(frame, text="Prioridad (múltiple)", font=self.root.FONT_LABEL, bg=frame.cget('bg')).pack(anchor='w')
+
+        priority_grid = tk.Frame(frame, bg=frame.cget('bg'))
+        priority_grid.pack(anchor='w')
+
+        for key, value in self.priority_map.items():
+            chk = tk.Checkbutton(priority_grid, text=value, variable=self.priority_vars[key], font=self.root.FONT_BODY,
+                                 bg=frame.cget('bg'))
+            chk.pack(anchor='w')
+
+    def update_group_suggestions(self, event=None):
+        typed_text = self.group_var.get()
+        # Llama al controlador para obtener la lista filtrada de grupos
+        response = GroupFinderController.recover_group(nombre=typed_text)
+
+        current_values = list(self.group_combobox.cget('values'))
+        new_values = []
+
+        if response['success'] and response['data'].get('grupos'):
+            grupos = response['data']['grupos']
+            self.group_id_map = {g['nombre']: g['id_grupo'] for g in grupos}
+            new_values = list(self.group_id_map.keys())
+        else:
+            self.group_id_map = {}  # Limpiar mapa si no hay resultados
+
+        # Solo actualiza la lista si ha cambiado para evitar parpadeo
+        if tuple(current_values) != tuple(new_values):
+            self.group_combobox.config(values=new_values)
+
+        if event and new_values:
+            self.group_combobox.focus()
+            # Esta línea fuerza el despliegue de la lista. Puede ser un poco agresiva
+            # pero es la forma más directa de mantenerla visible.
+            self.group_combobox.event_generate('<Down>')
+
+    # --- Lógica principal de búsqueda ---
+
+    def execute_search(self):
+        # 1. Recopilar filtros
+        nombre = self.name_var.get().strip() or None
+
+        status_map = {"Todos": None, "Realizado": True, "No Realizado": False}
+        realizado = status_map.get(self.status_var.get())
+
+        selected_group_name = self.group_var.get().strip()
+        id_grupo = self.group_id_map.get(selected_group_name) if selected_group_name else None
+
+        archivado = self.archived_var.get() == "Archivadas"
+
+        # Nuevo: Recopilar prioridades seleccionadas
+        prioridades_seleccionadas = [p for p, var in self.priority_vars.items() if var.get()]
+
+        # 2. Llamar al controlador
+        response = TaskFinderController.recover_task(
+            nombre=nombre,
+            fecha_ini=self.start_date,
+            fecha_fin=self.end_date,
+            realizado=realizado,
+            id_grupo=id_grupo,
+            archivado=archivado,
+            prioridad=prioridades_seleccionadas or None  # Pasa None si la lista está vacía
+        )
+
+        # 3. Procesar resultados y refrescar la vista
+        if response['success']:
+            self.search_results = response['data'].get('tareas') or []
+        else:
+            messagebox.showerror("Error de Búsqueda", response['response'])
+            self.search_results = []
+
+        # CORRECCIÓN: Reiniciar la paginación correctamente con cada búsqueda
+        self.current_page = 1
+        self.total_pages = (len(self.search_results) + self.tasks_per_page - 1) // self.tasks_per_page or 1
+
+        self.display_current_page()
+        self.setup_pagination_controls()  # Vuelve a dibujar los controles de paginación
+
+    # El resto de la clase (métodos de creación de widgets, paginación, etc.)
+    # se mantiene como en la versión anterior, ya que su lógica es sólida.
+    # Aquí los incluyo para que la clase esté completa.
+
+    def go_to_main(self):
+        MainView(root=self.root)
 
     def create_name_filter(self, parent):
         frame = tk.Frame(parent, bg=parent.cget('bg'))
         frame.pack(side='left', padx=10, anchor='n')
         tk.Label(frame, text="Nombre Tarea", font=self.root.FONT_LABEL, bg=frame.cget('bg')).pack(anchor='w')
         tk.Entry(frame, textvariable=self.name_var, font=self.root.FONT_BODY, width=20).pack()
+        tk.Button(frame, text="Limpiar", command=lambda: self.name_var.set(""), font=("Helvetica", 8)).pack(pady=2)
 
     def create_date_filter(self, parent, label_text, target):
         frame = tk.Frame(parent, bg=parent.cget('bg'))
@@ -2682,7 +3028,6 @@ class TaskSearchView:
 
         date_widget_frame = tk.Frame(frame, bg=frame.cget('bg'))
         date_widget_frame.pack()
-
         date_label = tk.Label(date_widget_frame, text="--/--/----", font=self.root.FONT_BODY, bg='white',
                               relief='solid', borderwidth=1, padx=5)
         date_label.pack(side='left')
@@ -2736,44 +3081,6 @@ class TaskSearchView:
         else:
             self.group_id_map = {}
             self.group_combobox['values'] = []
-
-    def execute_search(self):
-        # 1. Recopilar y limpiar todos los filtros
-        nombre = self.name_var.get().strip() or None
-
-        status_map = {"Todos": None, "Realizado": True, "No Realizado": False}
-        realizado = status_map.get(self.status_var.get())
-
-        selected_group_name = self.group_var.get().strip()
-        id_grupo = self.group_id_map.get(selected_group_name) if selected_group_name else None
-
-        archivado = True if self.archived_var.get() == "Archivadas" else False
-
-        # 2. Llamar al controlador con los argumentos correctos
-        response = TaskFinderController.recover_task(
-            nombre=nombre,
-            fecha_ini=self.start_date,
-            fecha_fin=self.end_date,
-            realizado=realizado,
-            id_grupo=id_grupo,
-            archivado=archivado
-        )
-
-        # 3. Procesar resultados
-        if response['success']:
-            self.search_results = response['data'].get('tareas') or []
-        else:
-            messagebox.showerror("Error de Búsqueda", response['response'])
-            self.search_results = []
-
-        # 4. Refrescar la vista de resultados
-        self.current_page = 1
-        self.total_pages = (len(self.search_results) + self.tasks_per_page - 1) // self.tasks_per_page or 1
-
-        self.display_current_page()
-        self.setup_pagination_controls()
-
-    # ... (El resto de los métodos como create_results_frame, insert_task_card y la paginación no necesitan cambios mayores y se mantienen de la implementación anterior, pero se incluyen aquí para que la clase esté completa)
 
     def create_results_frame(self, parent):
         tk.Label(parent, text="Resultados", font=("Helvetica", 16, "bold"), bg=parent.cget('bg')).pack(pady=(10, 10),
