@@ -24,6 +24,8 @@ class RegisterUserController:
             alias (str): Alias único para el usuario.
             password (str): Contraseña del usuario.
             confirm_password (str): Confirmación de la contraseña.
+            pregunta (str)
+            respuesta (str)
 
         Returns:
             tuple: (bool, str) indicando si el registro fue exitoso y un mensaje asociado.

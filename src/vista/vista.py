@@ -757,8 +757,11 @@ class TaskDetailView:
 
         # --- CORRECCIÓN CLAVE: Añadir el 'else' para manejar tareas individuales ---
         if self.task_data.get('grupo'):
+            self.root.root.geometry("750x650")
             self._build_group_task_view(scrollable_frame)
         else:
+            self.root.root.geometry("450x650")
+            self.root.root.minsize(450, 650)
             self._build_individual_task_view(scrollable_frame)
 
         tk.Button(scrollable_frame, text="← Volver a la Lista", command=self.go_to_main_view, bg='#6C757D',
@@ -789,6 +792,7 @@ class TaskDetailView:
         Construye la UI para una tarea que no pertenece a un grupo.
         Esta función estaba ausente y es la causa del error.
         """
+
         # Panel de Detalles
         details_frame = tk.LabelFrame(parent, text="Detalles", font=self.root.FONT_LABEL, bg=parent.cget('bg'), padx=15,
                                       pady=15)
@@ -1423,15 +1427,19 @@ class RegisterTareaUserView:
     def __init__(self, root: 'RootView'):
         self.root = root
         self.selected_group_id = None
-        self.current_user_alias = SessionController.get_alias_user()  # Use SessionController
+        self.current_user_alias = SessionController.get_alias_user()
         self.master_alias_of_selected_group = None
-        self.all_group_members_data = {}  # Stores {alias: rol}
-        self.members_to_assign = {}  # {alias: {'var': BooleanVar, 'rol': str, 'is_fixed': bool}}
+        self.all_group_members_data = {}
+        self.members_to_assign = {}
         self.member_display_frames = {}
         self.selected_date = datetime.date.today()
         self.date_display_label = None
         self.group_check_var = tk.BooleanVar(value=False)
         self.check_type_frame = None
+
+        self.priority_var = tk.StringVar(value="Media")  # Valor por defecto
+        self.priorities_map = {1: "Muy Alta", 2: "Alta", 3: "Media", 4: "Baja", 5: "Muy Baja"}
+        self.reverse_priorities_map = {v: k for k, v in self.priorities_map.items()}
 
         self.create_fomulate_tarea()
 
@@ -1460,12 +1468,14 @@ class RegisterTareaUserView:
         form_content_frame.pack(expand=True, fill='x')
         form_content_frame.grid_columnconfigure(1, weight=1)  # Allow inputs to expand
 
-        labels_texts = ['Nombre de la Tarea:', 'Fecha:', 'Prioridad (1-5):', 'Detalle:']
+        labels_texts = ['Nombre de la Tarea:', 'Fecha:', 'Prioridad:', 'Detalle:']
         inputs_names = ['inpNombreCreateTareaUser', 'inpFechaProgramadaCreateTareaUser', 'inpPrioridadCreateTarea',
                         'inpDetalleCreateTarea']
+
         for i, text in enumerate(labels_texts):
             tk.Label(form_content_frame, text=text, font=self.root.FONT_LABEL, bg=form_content_frame.cget('bg')).grid(
                 row=i, column=0, sticky='nw', pady=5, padx=5)
+
             if text == 'Detalle:':
                 inp = Text(form_content_frame, font=self.root.FONT_BODY, height=6, wrap=tk.WORD, relief='solid',
                            borderwidth=1)
@@ -1477,10 +1487,17 @@ class RegisterTareaUserView:
                                                    font=self.root.FONT_BODY, relief='solid', borderwidth=1, anchor='w')
                 self.date_display_label.pack(side='left', fill='x', expand=True, ipady=4, padx=(0, 5))
                 tk.Button(date_frame, text="📅", command=self.open_calendar, relief='flat').pack(side='left')
-                inp = self.date_display_label  # El input "lógico" ahora es el label
-            else:
+                inp = self.date_display_label
+            elif text == 'Prioridad:':
+                # REEMPLAZO: Se usa un Combobox en lugar de un Entry
+                inp = ttk.Combobox(form_content_frame, textvariable=self.priority_var,
+                                   values=list(self.priorities_map.values()), state='readonly',
+                                   font=self.root.FONT_BODY)
+                inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5, ipady=2)
+            else:  # Para el nombre
                 inp = tk.Entry(form_content_frame, font=self.root.FONT_BODY, relief='solid', borderwidth=1)
                 inp.grid(row=i, column=1, sticky='ew', pady=5, padx=5, ipady=4)
+
             self.root.componentes[inputs_names[i]] = inp
 
         # Group Selection
@@ -1687,20 +1704,21 @@ class RegisterTareaUserView:
             self.update_member_combobox()
 
     def btn_registrar_tarea(self):
+
         nombre = self.root.componentes.get('inpNombreCreateTareaUser').get()
         fecha = self.selected_date.strftime('%d-%m-%Y')
-        prioridad_str = self.root.componentes.get('inpPrioridadCreateTarea').get()
-        detalle = self.root.componentes.get('inpDetalleCreateTarea').get("1.0", tk.END).strip()  # From Text widget
-        # Clear previous
+        detalle = self.root.componentes.get('inpDetalleCreateTarea').get("1.0", tk.END).strip()
 
-        if not all([nombre, fecha, prioridad_str]):  # Detalle can be optional based on your rules
-            messagebox.showerror(title="Error de datos", message='Nombre, Fecha y Prioridad son obligatorios.')
+        # Obtener prioridad desde el combobox y convertirla a número
+        priority_name = self.priority_var.get()
+        prioridad = self.reverse_priorities_map.get(priority_name)
+
+        if not nombre:
+            messagebox.showerror(title="Error de datos", message='El nombre de la tarea es obligatorio.')
             return
-        try:
-            prioridad = int(prioridad_str)
-            if not (1 <= prioridad <= 5): raise ValueError("Rango")
-        except ValueError:
-            messagebox.showerror(title='Error', message='Prioridad debe ser un número entre 1 y 5.')
+
+        if not prioridad:
+            messagebox.showerror(title="Error de datos", message='Debe seleccionar una prioridad válida.')
             return
 
         miembros_a_asignar_final = 'all'
@@ -2538,14 +2556,16 @@ class RegisterTaskForGroupView(Toplevel):
         self.parent_view = parent_view
         self.group_id = group_id
         self.group_name = group_name
-        # Estado
         self.selected_date = datetime.date.today()
         self.current_user_alias = SessionController.get_alias_user()
         self.all_group_members_data = {m['alias']: m['rol'] for m in group_members}
         self.members_to_assign = {}
         self.group_check_var = tk.BooleanVar(value=False)
 
-        # Widgets
+        self.priority_var = tk.StringVar(value="Media")
+        self.priorities_map = {1: "Muy Alta", 2: "Alta", 3: "Media", 4: "Baja", 5: "Muy Baja"}
+        self.reverse_priorities_map = {v: k for k, v in self.priorities_map.items()}
+
         self.date_display_label = None
         self.assignment_frame = None
         self.members_selection_frame = None
@@ -2556,7 +2576,7 @@ class RegisterTaskForGroupView(Toplevel):
         self.config(bg=self.root.COLOR_BACKGROUND, padx=20, pady=20)
         self.transient(self.root.root)
         self.grab_set()
-        self.minsize(width=1000, height=650)
+        self.minsize(width=1050, height=650)
         self.create_formulate_tarea()
         self.root.center_window(top_level_window=self)
 
@@ -2574,7 +2594,7 @@ class RegisterTaskForGroupView(Toplevel):
                  bg=self.cget('bg')).grid(row=0, column=0, columnspan=2, pady=(0, 15))
         form_content_frame.grid_columnconfigure(1, weight=1)
 
-        labels_texts = ['Nombre de la Tarea:', 'Fecha:', 'Prioridad (1-5):', 'Detalle:']
+        labels_texts = ['Nombre de la Tarea:', 'Fecha:', 'Prioridad:', 'Detalle:']
         self.inputs = {}
         for i, text in enumerate(labels_texts):
             tk.Label(form_content_frame, text=text, font=self.root.FONT_LABEL, bg=self.cget('bg')).grid(row=i + 1,
@@ -2582,6 +2602,7 @@ class RegisterTaskForGroupView(Toplevel):
                                                                                                         sticky='nw',
                                                                                                         pady=5, padx=5)
             key = text.split(' ')[0].lower().replace(':', '')
+
             if key == 'detalle':
                 inp = Text(form_content_frame, font=self.root.FONT_BODY, height=6, wrap=tk.WORD, relief='solid',
                            borderwidth=1)
@@ -2594,7 +2615,13 @@ class RegisterTaskForGroupView(Toplevel):
                 self.date_display_label.pack(side='left', fill='x', expand=True, ipady=4, padx=(0, 5))
                 tk.Button(date_frame, text="📅", command=self.open_calendar, relief='flat').pack(side='left')
                 inp = self.date_display_label
-            else:
+            elif key == 'prioridad':
+                # REEMPLAZO: Se usa un Combobox
+                inp = ttk.Combobox(form_content_frame, textvariable=self.priority_var,
+                                   values=list(self.priorities_map.values()), state='readonly',
+                                   font=self.root.FONT_BODY)
+                inp.grid(row=i + 1, column=1, sticky='ew', pady=5, padx=5, ipady=2)
+            else:  # Para el nombre
                 inp = tk.Entry(form_content_frame, font=self.root.FONT_BODY, relief='solid', borderwidth=1)
                 inp.grid(row=i + 1, column=1, sticky='ew', pady=5, padx=5, ipady=4)
             self.inputs[key] = inp
@@ -2716,32 +2743,33 @@ class RegisterTaskForGroupView(Toplevel):
             self.update_members_display()
 
     def btn_registrar_tarea(self):
+        # --- MODIFICADO: Lógica de guardado ---
         nombre = self.inputs['nombre'].get()
-        prioridad_str = self.inputs['prioridad'].get()
         detalle = self.inputs['detalle'].get("1.0", "end-1c")
 
-        is_valid, msg = TaskController.validar_datos(fecha=self.selected_date, prioridad=prioridad_str)
-        if not nombre or not is_valid:
-            messagebox.showerror("Datos Inválidos",
-                                 f"Por favor, corrige los errores:\n- El nombre es obligatorio.\n- {msg}",
-                                 parent=self)
+        # Obtener prioridad desde el combobox y convertirla a número
+        priority_name = self.priority_var.get()
+        prioridad = self.reverse_priorities_map.get(priority_name)
+
+        if not nombre or not prioridad:
+            messagebox.showerror("Datos Inválidos", "El nombre y la prioridad son obligatorios.", parent=self)
             return
 
         fecha_str = self.selected_date.strftime('%d-%m-%Y')
-        prioridad = int(prioridad_str)
 
         miembros_disponible = 'all'
         if self.assignment_type_var.get() == 'personalizado':
             miembros_disponible = [[alias, data['var'].get()] for alias, data in self.members_to_assign.items()]
             if not miembros_disponible:
-                messagebox.showerror("Datos incompletos",
-                                     "Debe seleccionar al menos un miembro para la asignación personalizada.",
-                                     parent=self)
+                messagebox.showerror("Datos incompletos", "Debe seleccionar al menos un miembro.", parent=self)
                 return
 
         is_registered, response = TaskController.event_register_task_group(
-            id_grupo=self.group_id, nombre=nombre, fecha=fecha_str,
-            prioridad=prioridad, detalle=detalle,
+            id_grupo=self.group_id,
+            nombre=nombre,
+            fecha=fecha_str,
+            prioridad=prioridad,  # Se envía el número
+            detalle=detalle,
             tipo_check=self.group_check_var.get(),
             miembros_disponible=miembros_disponible)
 
