@@ -5,7 +5,7 @@ Este módulo contiene el controlador encargado de manejar la lógica relacionada
 con la gestión de tareas, como la recuperación, creación, modificación o eliminación
 de tareas de usuario.
 """
-from http.client import responses
+
 
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.entities.tarea import Tarea
@@ -308,19 +308,14 @@ class TaskController:
 
     @staticmethod
     def event_add_group_task_exits(id_tarea, id_grupo, miembros_disponible: list[[str, bool]] or str = 'all'):
-        if (GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user(), id_grupo=id_grupo).name
-                not in ['master', 'editor']):
-            return False, "No se tienen los permisos para realizar estos cambios."
 
-        tarea = TaskServiceData.get_task(id_tarea)
-        if miembros_disponible != 'all':
-            miembros_id_disponible = [[UserServiceData.recover_id_user_for_alias(miembro), disponible]
-                                      if miembro != SessionManager.get_instance().usuario.Alias else [None, None]
-                                      for miembro, disponible in miembros_disponible]
-        else:
-            miembros_id_disponible = miembros_disponible
-        return (RegisterTask(tarea=tarea, id_grupo=id_grupo, miembro_disponible=miembros_id_disponible, anadir=True)
-                .register_task())
+        try:
+            TaskServiceData.add_group_to_task_exits(id_tarea=id_tarea, id_grupo=id_grupo,
+                                                    miembro_disponible=miembros_disponible)
+            return True, "Se agregó el grupo a la tarea."
+        except Exception as E:
+            return False, f"No se pudo agregar el grupo a la tarea.\n{E}"
+
 
     @staticmethod
     def event_archive_task(id_tarea)->dict:

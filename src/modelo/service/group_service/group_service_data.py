@@ -68,6 +68,21 @@ class GroupServiceData:
         return [member[0] for member in response]
 
     @staticmethod
+    def get_all_members_alias(id_grupo) -> list[str]:
+        """Obtiene los IDs de todos los miembros de un grupo.
+
+        Args:
+            id_grupo (int): ID del grupo.
+
+        Returns:
+            list[int]: Lista con IDs de usuarios miembros.
+        """
+        response = (session.query(Usuario.Alias).join(UsuarioGrupo, UsuarioGrupo.IDUsuario==Usuario.IDUsuario)
+                    .filter(UsuarioGrupo.IDGrupo == id_grupo).all())
+        return [member[0] for member in response]
+
+
+    @staticmethod
     def get_all_members_with_rol(id_grupo):
         """Obtiene alias y rol de todos los miembros activos de un grupo.
 
@@ -78,7 +93,7 @@ class GroupServiceData:
             list[list]: Lista de [alias, rol] para cada miembro activo.
         """
         response = (session.query(Usuario.Alias, UsuarioGrupo.rol)
-                    .join(Usuario, Usuario.IDUsuario == UsuarioGrupo.IDUsuario)
+                    .join(UsuarioGrupo, UsuarioGrupo.IDUsuario == Usuario.IDUsuario)
                     .filter(UsuarioGrupo.IDGrupo == id_grupo, Usuario.Estado==True).all())
         return [[member[0], member[1]] for member in response]
 
@@ -140,7 +155,7 @@ class GroupServiceData:
     @staticmethod
     def get_master_alias_of_group(id_grupo):
         return session.query(Usuario.Alias).join(UsuarioGrupo, UsuarioGrupo.IDUsuario == Usuario.IDUsuario).filter(
-            UsuarioGrupo.IDGrupo == id_grupo
+            UsuarioGrupo.IDGrupo == id_grupo, UsuarioGrupo.rol == Rol.master
         ).first()[0]
 
     @staticmethod

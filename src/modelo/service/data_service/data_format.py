@@ -169,6 +169,11 @@ class DataFormat:
                 'archivado': user_manag.Archivado,
                 'disponible': user_manag.Disponible, #Checkable o editable
             },
+            'grupo': {
+                'id_grupo': user_manag.IDGrupo,
+                'nombre': user_manag.grupo.Nombre
+            } if user_manag.IDGrupo else None
+            ,
             'miembros':
                 [{'alias': miembro.usuario.Alias,
                   'editable': miembro.Disponible,
@@ -196,7 +201,7 @@ class DataFormat:
                  'disponible': disponible,
                  'realizado': realizado,
                  'fecha': tarea.Fecha_programada.strftime("%d-%m-%Y"),
-                 'prioridad': tarea.Prioridad,
+                 'prioridad': DataFormat.prioridades.get(tarea.Prioridad),
                  'nombre_prioridad': DataFormat.prioridades.get(tarea.Prioridad),
                  'detalle': tarea.Detalle,
                  'archivado': archivado

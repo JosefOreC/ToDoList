@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 
+
 from src.modelo.database_management.base.declarative_base import session
 from src.modelo.entities.modelo import UsuarioTarea, Tarea, Rol
 from src.modelo.service.group_service.group_service_data import GroupServiceData
@@ -303,5 +304,45 @@ class TaskServiceData:
 
         return usuarios_validos, usuarios_invalidos
 
+    @staticmethod
+    def add_group_to_task_exits(id_tarea, id_grupo, miembro_disponible: list[str, bool]):
+        """
+        Agrega un grupo a una tarea ya existente
+        :param id_tarea:
+        :param id_grupo:
+        :param miembro_disponible:
+        :return:
+        """
 
+        rela_pr = session.query(UsuarioTarea).filter_by(IDUsuario = SessionManager.get_id_user(),
+                                                        IDTarea=id_tarea).first()
+
+        if rela_pr.IDGrupo:
+            raise Exception("La tarea ya tiene un grupo.")
+
+        rol_sm = GroupServiceData.get_rol_in_group(SessionManager.get_id_user(), id_grupo)
+        is_master_or_editor = rol_sm in [Rol.master, Rol.editor]
+
+        if not is_master_or_editor:
+            raise Exception("No se tienen permisos en el grupo para agregar una tarea.")
+
+        rela_pr.IDGrupo=id_grupo
+        session.commit()
+
+        master = GroupServiceData.get_master_alias_of_group(id_grupo)
+        rela_master = [master, True]
+
+        if miembro_disponible == 'all':
+            miembros = GroupServiceData.get_all_members_alias(id_grupo)
+            alias_sm = SessionManager.get_instance().usuario.Alias
+            miembro_disponible = [[alias, True] for alias in miembros if alias_sm != alias]
+        elif rela_master in miembro_disponible:
+            pass
+        elif [master, False] in miembro_disponible:
+            indice = miembro_disponible.index([master, False])
+            miembro_disponible[indice] = rela_master
+        else:
+            miembro_disponible.append(rela_master)
+
+        TaskServiceData.add_members_to_task_group(id_tarea=id_tarea, alias_users_permitions=miembro_disponible)
 

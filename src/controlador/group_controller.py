@@ -60,8 +60,8 @@ class GroupController:
         return UserServiceData.recover_id_user_for_alias(alias_usuario)
 
     @staticmethod
-    def get_all_members(id_grupo):
-        """Obtiene todos los miembros de un grupo, incluyendo sus roles.
+    def get_all_members(id_grupo)->list[int]:
+        """Obtiene todos los miembros de un grupo.
 
         Args:
             id_grupo (int): ID del grupo.
@@ -69,7 +69,7 @@ class GroupController:
         Returns:
             list: Lista de miembros con sus roles.
         """
-        return GroupServiceData.get_all_members_with_rol(id_grupo)
+        return GroupServiceData.get_all_members(id_grupo)
 
     @staticmethod
     def get_all_members_with_rol(id_grupo):
