@@ -2,13 +2,19 @@
 Clase que controla la entidad tarea y relacionados
 desde la base de datos CRUD.
 """
+from typing import Any
+
+from sqlalchemy.exc import IntegrityError
 
 from src.modelo.database_management.base.declarative_base import session
-from src.modelo.entities.modelo import UsuarioTarea, Tarea, Grupo
+from src.modelo.entities.modelo import UsuarioTarea, Tarea, Rol
+from src.modelo.service.group_service.group_service_data import GroupServiceData
 from src.modelo.service.session_service.session_manager import SessionManager
 from src.modelo.service.data_service.data_format import DataFormat
 from datetime import date
 from src.modelo.service.task_service.update_task import UpdateTask
+from src.modelo.service.user_service.user_service_data import UserServiceData
+
 
 class TaskServiceData:
     @staticmethod
@@ -30,7 +36,7 @@ class TaskServiceData:
     @staticmethod
     def update_task_user(id_usuario, id_tarea, nombre = None,
                          fecha = None, prioridad = None, disponible = None,
-                         realizado = None, detalle = None, archivado = None):
+                         realizado = None, detalle = None, archivado = None, type_check=None):
 
         """
         Actualiza los datos de una tarea relacionada a un usuario específico.
@@ -46,6 +52,28 @@ class TaskServiceData:
             detalle (str, optional): Nuevo detalle de la tarea.
             archivado (bool, optional): Estado de archivado.
         """
+
+        if (id_grupo:=TaskServiceData.get_id_group_of_task(id_tarea)) is not None:
+            rol_sm = GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user(), id_grupo=id_grupo)
+            is_sm_master = rol_sm == Rol.master
+            if not is_sm_master:
+                is_sm_editor = rol_sm == Rol.editor
+
+                if not is_sm_editor:
+                    raise Exception("No se tienen Permisos para editar esta tarea.")
+
+                rol_user_edit = GroupServiceData.get_rol_in_group(id_usuario=id_usuario, id_grupo=id_grupo)
+                is_user_edit_master = rol_user_edit == Rol.master
+                if is_user_edit_master:
+                    raise Exception("No se puede editar la tarea a un master.")
+
+                is_editable = session.query(UsuarioTarea.Disponible).filter(UsuarioTarea.IDUsuario==id_usuario,
+                                                                    UsuarioTarea.IDTarea==id_tarea,
+                                                                    UsuarioTarea.IDGrupo==id_grupo).first()[0]
+
+                if not is_editable:
+                    raise Exception("No tienes los permisos para editar esta tarea.")
+
         updatedata = UpdateTask(id_tarea, id_usuario)
 
         if nombre:
@@ -62,8 +90,18 @@ class TaskServiceData:
             updatedata.update_realizado(realizado)
         if detalle:
             updatedata.update_detalle(detalle)
+        if type_check:
+            updatedata.update_type_check(type_check)
 
         session.commit()
+
+    @staticmethod
+    def edit_disponible_from_user(id_usuario, id_tarea, disponible):
+        TaskServiceData.update_task_user(id_usuario=id_usuario, id_tarea=id_tarea, disponible=disponible)
+
+    @staticmethod
+    def edit_type_check_from_group(id_usuario, id_tarea, type_check):
+        TaskServiceData.update_task_user(id_usuario=id_usuario, id_tarea=id_tarea, type_check=type_check)
 
     @staticmethod
     def delete_relation_task(id_usuario, id_tarea):
@@ -74,10 +112,43 @@ class TaskServiceData:
         :param id_tarea:
         :return:
         """
+
         usuario_tarea = session.query(UsuarioTarea).filter_by(IDUsuario=id_usuario, IDTarea=id_tarea).first()
         session.delete(usuario_tarea)
         session.commit()
 
+    @staticmethod
+    def delete_relation_task_member_group(id_usuario, id_tarea):
+        """
+        Se usa cuando se está eliminando una tarea de un grupo de la que ya no se es miembro (Desaparece solo
+        para el usuario que lo elimina)
+        :param id_usuario:
+        :param id_tarea:
+        :return:
+        """
+
+        if (id_grupo:=TaskServiceData.get_id_group_of_task(id_tarea)) is not None:
+
+            rel = session.query(UsuarioTarea.Disponible).filter(UsuarioTarea.IDUsuario==SessionManager.get_id_user(),
+                                                               UsuarioTarea.IDGrupo==id_grupo,
+                                                               UsuarioTarea.IDTarea==id_tarea).first()[0]
+
+            is_rol_permition = (GroupServiceData.get_rol_in_group(id_grupo=id_grupo,
+                                                                  id_usuario=SessionManager.get_id_user())
+                                                                in [Rol.master, Rol.editor])
+
+            is_editable_task_for_user = rel
+
+            if not is_rol_permition or not is_editable_task_for_user:
+                raise Exception("No se tienen permisos para eliminar usuarios.")
+
+            if GroupServiceData.get_rol_in_group(id_grupo=id_grupo, id_usuario=id_usuario) == Rol.master:
+                raise Exception("No se puede quitar de una tarea de grupo al master.")
+
+
+        usuario_tarea = session.query(UsuarioTarea).filter_by(IDUsuario=id_usuario, IDTarea=id_tarea).first()
+        session.delete(usuario_tarea)
+        session.commit()
 
     @staticmethod
     def get_tasks_user_list_date(usuario_id: int, fecha_inicio: str or date, fecha_fin: str or date = None,
@@ -194,8 +265,43 @@ class TaskServiceData:
                 .filter(Tarea.IDTarea==id_tarea, UsuarioTarea.IDUsuario==id_usuario, Tarea.Activo==True)
                 .first())
 
+    @staticmethod
+    def __add_member_to_task_group(id_tarea, id_usuario, id_grupo, disponible = True):
+        if session.query(1).filter(UsuarioTarea.IDUsuario==id_usuario, UsuarioTarea.IDTarea==id_tarea,
+                                   UsuarioTarea.IDGrupo == id_grupo).first():
+            raise Exception("Esta relación ya está agregada.", IntegrityError)
 
+        new_rela = UsuarioTarea(IDUsuario=id_usuario, IDGrupo=id_grupo, IDTarea=id_tarea, Disponible=disponible)
+        try:
+            session.add_all([new_rela])
+            session.commit()
+        except Exception as E:
+            session.rollback()
+            raise Exception("No se pudo agregar la relacion.\n {E}")
 
+    @staticmethod
+    def add_members_to_task_group(id_tarea, alias_users_permitions: list[str,bool])\
+            -> tuple[list[Any], list[list[str | Any]]]:
+        usuarios_validos = []
+        usuarios_invalidos = []
+        if (id_grupo:= TaskServiceData.get_id_group_of_task(id_tarea)) is None:
+            raise Exception("La tarea no pertenece a ningún Grupo.")
+
+        if GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user()
+                , id_grupo=id_grupo) not in [Rol.editor, Rol.master]:
+            raise Exception("No se tienen permisos para realizar estos cambios.")
+
+        for alias, disponible in alias_users_permitions:
+            try:
+                temp = UserServiceData.recover_id_user_for_alias(alias)
+                if not GroupServiceData.is_user_in_group(id_grupo, temp):
+                    usuarios_invalidos.append([alias, "No pertenece al grupo."])
+                TaskServiceData.__add_member_to_task_group(id_tarea, temp, id_grupo, disponible)
+                usuarios_validos.append(alias)
+            except Exception as E:
+                usuarios_invalidos.append([alias, f"No se pudo por {E}"])
+
+        return usuarios_validos, usuarios_invalidos
 
 
 

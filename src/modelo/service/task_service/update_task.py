@@ -79,6 +79,14 @@ class UpdateTask:
 
         self.__usuario_tarea.Realizado = realizado
 
+    def update_type_check(self, type_check):
+        """
+        actualiza el tipo de check
+        :param type_check:
+        :return:
+        """
+        self.__tarea.type_check = type_check
+
     def update_detalle(self, detalle):
         """
         Actualiza el detalle o descripción de la tarea.

@@ -413,18 +413,85 @@ class TaskController:
         }
 
     @staticmethod
-    def add_group_to_tarea(id_tarea, id_grupo):
-        if GroupServiceData.get_rol_in_group(id_usuario=SessionManager.get_id_user(), id_grupo=id_grupo) == Rol.miembro:
-            return {
-                'success': False,
-                'response': 'No se tienen los permisos para editar esta tarea.'
+    def add_member_group_to_task(alias_users_permitions: list[str, bool], id_tarea:int):
+
+        try:
+            validos, invalidos = TaskServiceData.add_members_to_task_group(id_tarea=id_tarea,
+                                                                alias_users_permitions=alias_users_permitions)
+            success = True
+            response = "Se agregaron a los usuarios."
+        except Exception as E:
+            success = False
+            response = f"No se agregaron a los usuarios.\n{E}"
+            validos, invalidos = None, None
+
+        if validos:
+            if len(validos) == len(alias_users_permitions):
+                validos = "all"
+            else:
+                validos = [{'alias': miembro} for miembro in validos]
+        else:
+            validos = None
+
+        invalidos= [{'alias': alias, 'fail': error} for alias, error in invalidos] if invalidos else None
+
+
+        return {
+            'success': success,
+            'response': response,
+            'data': {
+                'usuarios_agregados': validos,
+                'usuarios_invalidos': invalidos
             }
+        }
 
+    @staticmethod
+    def edit_disponible_to_task_in_group(id_tarea, alias_usuario, disponible):
+        try:
+            id_usuario = UserServiceData.recover_id_user_for_alias(alias_usuario)
+            TaskServiceData.edit_disponible_from_user(id_usuario=id_usuario, id_tarea=id_tarea, disponible=disponible)
+            success = True
+            response = "Se editó el apartado disponible de un usuario de la tarea."
+        except Exception as E:
+            success = False,
+            response = f"No se puedo editar el apartado disponible de un usuario. \n{E}"
 
+        return {
+            'success': success,
+            'response': response
+        }
 
+    @staticmethod
+    def edit_type_check_to_task(id_tarea, alias_usuario, type_check):
+        try:
+            id_usuario = UserServiceData.recover_id_user_for_alias(alias_usuario)
+            TaskServiceData.edit_type_check_from_group(id_usuario, id_tarea, type_check)
+            success = True
+            response = "Se actualizó el tipo de check."
+        except Exception as E:
+            success = False
+            response = f"No se puedo actualizar el tipo de check.\n{E}"
 
+        return {
+            'success': success,
+            'response': response
+        }
 
+    @staticmethod
+    def delete_user_of_task_group(alias_usuario, id_tarea):
+        try:
+            id_usuario = UserServiceData.recover_id_user_for_alias(alias_usuario)
+            TaskServiceData.delete_relation_task_member_group(id_usuario, id_tarea)
+            success = True
+            response = f"Se quitó al usuario {alias_usuario} de la tarea."
+        except Exception as E:
+            success = False
+            response = f"No se pudo quitar al usuario {alias_usuario} de la tarea. \n{E}"
 
+        return {
+            'success': success,
+            'response': response
+        }
 
 
 
