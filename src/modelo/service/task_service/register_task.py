@@ -51,7 +51,7 @@ class RegisterTask:
         Registra la tarea para todos los miembros del grupo según disponibilidad.
         """
         for miembro, disponible in self.users_grupo:
-            if miembro is None and disponible is None:
+            if self.anadir and (miembro is None and disponible is None):
                 us = session.query(UsuarioTarea).filter_by(IDUsuario=SessionManager.get_id_user(),
                                                            IDTarea=self.tarea.IDTarea).first()
                 us.IDGrupo = self.id_grupo
