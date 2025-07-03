@@ -297,6 +297,7 @@ class TaskServiceData:
                 temp = UserServiceData.recover_id_user_for_alias(alias)
                 if not GroupServiceData.is_user_in_group(id_grupo, temp):
                     usuarios_invalidos.append([alias, "No pertenece al grupo."])
+                    continue
                 TaskServiceData.__add_member_to_task_group(id_tarea, temp, id_grupo, disponible)
                 usuarios_validos.append(alias)
             except Exception as E:

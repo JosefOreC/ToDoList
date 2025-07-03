@@ -1,92 +1,325 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from sqlalchemy.exc import IntegrityError
-
 from src.modelo.service.group_service.group_service_data import GroupServiceData
-from src.modelo.entities.modelo import Grupo, UsuarioGrupo, Rol
+from src.modelo.service.task_service.task_service_data import TaskServiceData
+from src.modelo.entities.modelo import Rol
+from src.modelo.entities.grupo import Grupo
+from src.modelo.entities.usuario_grupo import UsuarioGrupo
+from sqlalchemy.exc import IntegrityError
 
 class TestGroupServiceData(unittest.TestCase):
 
+    @patch("src.modelo.service.group_service.group_service_data.session")
+    def test_get_group_for_id(self, mock_session):
+        fake_group = MagicMock()
+        mock_session.query.return_value.filter_by.return_value.first.return_value = fake_group
+
+        result = GroupServiceData.get_group_for_id(1)
+
+        self.assertEqual(result, fake_group)
+        mock_session.query.assert_called_once()
+
+    @patch("src.modelo.service.group_service.group_service_data.session")
+    def test_get_data_task_group_name_exists(self, mock_session):
+        mock_session.query.return_value.filter.return_value.first.return_value = ("Grupo 1",)
+
+        result = GroupServiceData.get_data_task_group_name(1)
+
+        self.assertEqual(result, "Grupo 1")
+
+    def test_get_data_task_group_name_none(self):
+        result = GroupServiceData.get_data_task_group_name(None)
+        self.assertIsNone(result)
+
+    @patch("src.modelo.service.group_service.group_service_data.session")
+    def test_get_all_members(self, mock_session):
+        mock_session.query.return_value.filter.return_value.all.return_value = [(1,), (2,), (3,)]
+
+        result = GroupServiceData.get_all_members(5)
+
+        self.assertEqual(result, [1, 2, 3])
+
+    @patch("src.modelo.service.group_service.group_service_data.session")
+    def test_is_user_in_group_true(self, mock_session):
+        mock_session.query.return_value.filter.return_value.first.return_value = (1,)
+
+        result = GroupServiceData.is_user_in_group(10, 100)
+        self.assertTrue(result)
+
+    @patch("src.modelo.service.group_service.group_service_data.session")
+    def test_is_user_in_group_false(self, mock_session):
+        mock_session.query.return_value.filter.return_value.first.return_value = None
+
+        result = GroupServiceData.is_user_in_group(10, 100)
+        self.assertFalse(result)
+
+    @patch("src.modelo.service.group_service.group_service_data.session")
+    def test_get_all_members_with_rol(self, mock_session):
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = [
+            ("ana", Rol.editor), ("bob", Rol.master)
+        ]
+
+        result = GroupServiceData.get_all_members_with_rol(5)
+
+        expected = [["ana", Rol.editor], ["bob", Rol.master]]
+        self.assertEqual(result, expected)
+
+    @patch("src.modelo.service.group_service.group_service_data.session")
+    def test_get_cant_members_group(self, mock_session):
+        mock_session.query.return_value.filter.return_value.all.return_value = [1, 2, 3]
+
+        result = GroupServiceData.get_cant_members_group(99)
+        self.assertEqual(result, 3)
+        self.assertEqual(result, 3)
+
+    @patch('src.modelo.service.task_service.task_service_data.GroupServiceData.get_rol_in_group')
+    @patch('src.modelo.service.task_service.task_service_data.SessionManager.get_id_user')
+    @patch(
+        'src.modelo.service.task_service.task_service_data.TaskServiceData._TaskServiceData__add_member_to_task_group')
+    @patch('src.modelo.service.task_service.task_service_data.TaskServiceData.get_id_group_of_task')
+    @patch('src.modelo.service.task_service.task_service_data.UserServiceData.recover_id_user_for_alias')
+    @patch('src.modelo.service.task_service.task_service_data.GroupServiceData.is_user_in_group')
+    def test_add_all_valid_members(self, mock_is_user_in_group, mock_recover_id, mock_get_group,
+                                   mock_add_member, mock_get_id_user, mock_get_rol):
+        mock_get_id_user.return_value = 1
+        mock_get_group.return_value = 10
+        mock_get_rol.return_value = Rol.master
+        mock_recover_id.side_effect = lambda alias: {'user1': 11, 'user2': 12}[alias]
+        mock_is_user_in_group.return_value = True
+
+        alias_users = [['user1', True], ['user2', True]]
+
+        result = TaskServiceData.add_members_to_task_group(5, alias_users)
+
+        self.assertEqual(result[0], ['user1', 'user2'])
+        self.assertEqual(result[1], [])
+
+    @patch('src.modelo.service.task_service.task_service_data.GroupServiceData.get_rol_in_group')
+    @patch('src.modelo.service.task_service.task_service_data.SessionManager.get_id_user')
+    @patch(
+        'src.modelo.service.task_service.task_service_data.TaskServiceData._TaskServiceData__add_member_to_task_group')
+    @patch('src.modelo.service.task_service.task_service_data.TaskServiceData.get_id_group_of_task')
+    @patch('src.modelo.service.task_service.task_service_data.UserServiceData.recover_id_user_for_alias')
+    @patch('src.modelo.service.task_service.task_service_data.GroupServiceData.is_user_in_group')
+    def test_add_some_invalid_members(self, mock_is_user_in_group, mock_recover_id, mock_get_group,
+                                      mock_add_member, mock_get_id_user, mock_get_rol):
+        mock_get_id_user.return_value = 1
+        mock_get_group.return_value = 10
+        mock_get_rol.return_value = Rol.editor
+        mock_recover_id.side_effect = lambda alias: {'user1': 11, 'user2': 12}[alias]
+        mock_is_user_in_group.side_effect = lambda id_grupo, id_usuario: id_usuario != 12
+
+        alias_users = [['user1', True], ['user2', True]]
+
+        result = TaskServiceData.add_members_to_task_group(5, alias_users)
+
+        self.assertEqual(result[0], ['user1', 'user2'])
+        self.assertEqual(result[1], [['user2', 'No pertenece al grupo.']])
+
+
+    @patch('src.modelo.service.task_service.task_service_data.GroupServiceData.get_rol_in_group')
+    @patch('src.modelo.service.task_service.task_service_data.SessionManager.get_id_user')
+    @patch('src.modelo.service.task_service.task_service_data.TaskServiceData.get_id_group_of_task')
+    def test_user_without_permission(self, mock_get_group, mock_get_id_user, mock_get_rol):
+        mock_get_id_user.return_value = 1
+        mock_get_group.return_value = 10
+        mock_get_rol.return_value = Rol.miembro
+
+        alias_users = [['user1', True]]
+
+        with self.assertRaises(Exception) as context:
+            TaskServiceData.add_members_to_task_group(5, alias_users)
+
+        self.assertIn("No se tienen permisos", str(context.exception))
+
+    @patch(
+        'src.modelo.service.group_service.group_service_data.GroupServiceData._GroupServiceData__delete_member_group')
+    @patch('src.modelo.service.group_service.group_service_data.session')
+    @patch('src.modelo.service.group_service.group_service_data.SessionManager.get_id_user')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.get_rol_in_group')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.get_cant_members_group')
+    def test_out_member_group_as_master_without_new_master_raises(self, mock_get_cant, mock_get_rol,
+                                                                  mock_get_id_user, mock_session, mock_delete):
+        mock_get_id_user.return_value = 1
+        mock_get_rol.return_value = Rol.master
+        mock_get_cant.return_value = 3  # hay más de un miembro
+
+        with self.assertRaises(Exception) as context:
+            GroupServiceData.out_member_group_session_manager(id_grupo=10)
+
+        self.assertIn("no se puede salir del grupo", str(context.exception).lower())
+
+    @patch(
+        'src.modelo.service.group_service.group_service_data.GroupServiceData._GroupServiceData__delete_member_group')
+    @patch('src.modelo.service.group_service.group_service_data.session')
+    @patch('src.modelo.service.group_service.group_service_data.SessionManager.get_id_user')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.get_rol_in_group')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.get_cant_members_group')
+    def test_out_member_group_as_master_with_new_master_success(self, mock_get_cant, mock_get_rol,
+                                                                mock_get_id_user, mock_session, mock_delete):
+        mock_get_id_user.return_value = 1
+        mock_get_rol.return_value = Rol.master
+        mock_get_cant.return_value = 3
+
+        new_master_mock = MagicMock()
+        mock_session.query.return_value.filter_by.return_value.first.return_value = new_master_mock
+
+        try:
+            GroupServiceData.out_member_group_session_manager(id_grupo=10, new_master=2)
+        except Exception:
+            self.fail("out_member_group_session_manager() raised Exception unexpectedly!")
+
+        self.assertEqual(new_master_mock.rol, Rol.master)
+        mock_session.commit.assert_called_once()
+        mock_delete.assert_called_once()
+
+    @patch(
+        'src.modelo.service.group_service.group_service_data.GroupServiceData._GroupServiceData__delete_member_group')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.is_user_in_group')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.get_rol_in_group')
+    @patch('src.modelo.service.group_service.group_service_data.SessionManager.get_id_user')
+    def test_expel_member_group_success(self, mock_get_id, mock_get_rol, mock_is_in_group, mock_delete):
+        mock_get_id.return_value = 1
+        mock_get_rol.return_value = Rol.master
+        mock_is_in_group.return_value = True
+
+        try:
+            GroupServiceData.expel_member_group(id_grupo=5, id_usuario=2)
+        except Exception:
+            self.fail("expel_member_group() raised Exception unexpectedly!")
+
+        mock_delete.assert_called_once()
+
+    @patch('src.modelo.service.group_service.group_service_data.SessionManager.get_id_user')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.get_rol_in_group')
+    def test_expel_member_group_without_permission_raises(self, mock_get_rol, mock_get_id):
+        mock_get_id.return_value = 1
+        mock_get_rol.return_value = Rol.miembro
+
+        with self.assertRaises(Exception) as context:
+            GroupServiceData.expel_member_group(id_grupo=5, id_usuario=2)
+
+        self.assertIn("no se tienen permisos", str(context.exception).lower())
+
+    @patch('src.modelo.service.group_service.group_service_data.SessionManager.get_id_user')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.get_rol_in_group')
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.is_user_in_group')
+    def test_expel_member_group_user_not_in_group_raises(self, mock_is_in_group, mock_get_rol, mock_get_id):
+        mock_get_id.return_value = 1
+        mock_get_rol.return_value = Rol.master
+        mock_is_in_group.return_value = False
+
+        with self.assertRaises(Exception) as context:
+            GroupServiceData.expel_member_group(id_grupo=5, id_usuario=2)
+
+        self.assertIn("no está en el grupo", str(context.exception).lower())
+
     @patch('src.modelo.service.group_service.group_service_data.session')
     def test_insert_group_success(self, mock_session):
-        mock_session.add_all = MagicMock()
-        mock_session.commit = MagicMock()
+        grupo = Grupo(Nombre="Grupo Test", Descripcion="Descripción")
+        rel1 = UsuarioGrupo(IDUsuario=1)
+        rel2 = UsuarioGrupo(IDUsuario=2)
 
-        grupo = Grupo(Nombre='Grupo de Prueba')
-        relation_list = [UsuarioGrupo(IDUsuario=1, IDGrupo=0, rol=Rol.miembro)]
+        # Simulamos que el IDGrupo se genera automáticamente después de flush
+        def flush_side_effect():
+            grupo.IDGrupo = 100
 
-        GroupServiceData.insert_group(grupo, relation_list)
+        mock_session.flush.side_effect = flush_side_effect
 
-        mock_session.add_all.assert_called()
-        mock_session.commit.assert_called()
+        try:
+            GroupServiceData.insert_group(grupo, [rel1, rel2])
+        except Exception:
+            self.fail("insert_group() raised Exception unexpectedly!")
+
+        # Validamos que se le asignó el ID al grupo en las relaciones
+        self.assertEqual(rel1.IDGrupo, 100)
+        self.assertEqual(rel2.IDGrupo, 100)
+
+        # Validamos llamadas al session
+        mock_session.add_all.assert_any_call([grupo])
+        mock_session.add_all.assert_any_call([rel1, rel2])
+        mock_session.commit.assert_called_once()
 
     @patch('src.modelo.service.group_service.group_service_data.session')
     def test_insert_group_integrity_error(self, mock_session):
-        # Simulamos el comportamiento del commit para que lance una IntegrityError
-        mock_session.add_all = MagicMock()
-        mock_session.commit = MagicMock(side_effect=IntegrityError("Ya existe un grupo con el mismo nombre.", 
-                                                                   params=None, 
-                                                                   orig=None))
+        grupo = Grupo(Nombre="Grupo Duplicado", Descripcion="Otro")
+        rels = [UsuarioGrupo(IDUsuario=1)]
 
-        grupo = Grupo(Nombre='Grupo de Prueba')
-        relation_list = [UsuarioGrupo(IDUsuario=1, IDGrupo=0, rol=Rol.miembro)]
+        # Simular IntegrityError en flush
+        mock_session.flush.side_effect = IntegrityError("Mock", "params", "orig")
 
-        with self.assertRaises(Exception) as context:  # Cambiamos a Exception aquí
-            GroupServiceData.insert_group(grupo, relation_list)
+        with self.assertRaises(Exception) as context:
+            GroupServiceData.insert_group(grupo, rels)
 
-        # Verifica que el mensaje de la excepción sea el esperado
-        self.assertEqual(str(context.exception), 'Ya existe un grupo con el mismo nombre.')
+        self.assertIn("Ya existe un grupo con el mismo nombre", str(context.exception))
+        mock_session.rollback.assert_called_once()
 
     @patch('src.modelo.service.group_service.group_service_data.session')
-    def test_get_data_task_group_name(self, mock_session):
-        mock_session.query.return_value.filter.return_value.first.return_value = ('Grupo de Prueba',)
+    def test_get_all_members_alias(self, mock_session):
+        # Simula el resultado del query: [('user1',), ('user2',)]
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = [('user1',),
+                                                                                                  ('user2',)]
 
-        result = GroupServiceData.get_data_task_group_name(1)
-        self.assertEqual(result, 'Grupo de Prueba')
-
-    @patch('src.modelo.service.group_service.group_service_data.session')
-    def test_get_all_members(self, mock_session):
-        mock_session.query.return_value.filter.return_value.all.return_value = [(1,), (2,)]
-
-        result = GroupServiceData.get_all_members(1)
-        self.assertEqual(result, [1, 2])
+        result = GroupServiceData.get_all_members_alias(1)
+        self.assertEqual(result, ['user1', 'user2'])
 
     @patch('src.modelo.service.group_service.group_service_data.session')
-    def test_get_all_members_with_rol(self, mock_session):
+    def test_get_all_members_without_master(self, mock_session):
+        # Simula el resultado del query: [(5,), (6,)]
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = [(5,), (6,)]
+
+        result = GroupServiceData.get_all_members_without_master(1)
+        self.assertEqual(result, [5, 6])
+
+    @patch('src.modelo.service.group_service.group_service_data.session')
+    def test_get_groups_editor_or_master(self, mock_session):
+        # Simula el resultado del query: [('Grupo A',), ('Grupo B',)]
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = [('Grupo A',),
+                                                                                                  ('Grupo B',)]
+
+        result = GroupServiceData.get_groups_editor_or_master(8)
+        self.assertEqual(result, ['Grupo A', 'Grupo B'])
+
+    @patch('src.modelo.service.group_service.group_service_data.session')
+    def test_get_groups_editor_or_master_with_id(self, mock_session):
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = [(1, 'Grupo A'),
+                                                                                                  (2, 'Grupo B')]
+        result = GroupServiceData.get_groups_editor_or_master_with_id(5)
+        self.assertEqual(result, [(1, 'Grupo A'), (2, 'Grupo B')])
+
+    @patch('src.modelo.service.group_service.group_service_data.session')
+    def test__get_all_groups(self, mock_session):
+        mock_session.query.return_value.all.return_value = [('Grupo A', 'Descripción A', 1),
+                                                            ('Grupo B', 'Descripción B', 2)]
+        result = GroupServiceData._GroupServiceData__get_all_groups()
+        self.assertEqual(result, [('Grupo A', 'Descripción A', 1), ('Grupo B', 'Descripción B', 2)])
+
+    @patch('src.modelo.service.group_service.group_service_data.session')
+    def test_get_all_user_groups(self, mock_session):
         mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = [
-            ('Usuario1', Rol.miembro.name),
-            ('Usuario2', Rol.editor.name)
+            (1, 'Grupo A', 'Desc A', Rol.editor),
+            (2, 'Grupo B', 'Desc B', Rol.master),
         ]
-
-        result = GroupServiceData.get_all_members_with_rol(1)
-        self.assertEqual(result, [['Usuario1', Rol.miembro.name], ['Usuario2', Rol.editor.name]])
-
-    @patch('src.modelo.service.group_service.group_service_data.session')
-    def test_change_rol_of_member(self, mock_session):
-        mock_session.query.return_value.filter_by.return_value.first.return_value = UsuarioGrupo(IDGrupo=1, IDUsuario=1)
-        mock_session.commit = MagicMock()
-
-        GroupServiceData.change_rol_of_member(1, 1, Rol.editor)
-
-        mock_session.commit.assert_called()
+        result = GroupServiceData.get_all_user_groups(10)
+        self.assertEqual(result, [
+            (1, 'Grupo A', 'Desc A', Rol.editor),
+            (2, 'Grupo B', 'Desc B', Rol.master),
+        ])
 
     @patch('src.modelo.service.group_service.group_service_data.session')
-    def test_update_group(self, mock_session):
-        mock_session.query.return_value.filter_by.return_value.first.return_value = Grupo(Nombre='Viejo Nombre')
-        mock_session.commit = MagicMock()
-
-        GroupServiceData.update_group(1, nombre='Nuevo Nombre')
-
-        mock_session.commit.assert_called()
+    @patch('src.modelo.service.group_service.group_service_data.GroupServiceData.is_user_in_group')
+    def test_get_rol_in_group(self, mock_is_in_group, mock_session):
+        mock_is_in_group.return_value = True
+        mock_session.query.return_value.filter_by.return_value.first.return_value = (Rol.editor,)
+        result = GroupServiceData.get_rol_in_group(id_usuario=7, id_grupo=3)
+        self.assertEqual(result, Rol.editor)
 
     @patch('src.modelo.service.group_service.group_service_data.session')
-    def test_delete_group_in_all_task_with_id_group(self, mock_session):
-        mock_session.query.return_value.filter_by.return_value.all.return_value = [MagicMock(IDGrupo=1)]
-        mock_session.commit = MagicMock()
+    def test_get_master_alias_of_group(self, mock_session):
+        mock_session.query.return_value.join.return_value.filter.return_value.first.return_value = ('admin_alias',)
+        result = GroupServiceData.get_master_alias_of_group(2)
+        self.assertEqual(result, 'admin_alias')
 
-        GroupServiceData.delete_group_in_all_task_with_id_group(1)
-
-        mock_session.commit.assert_called()
 
 if __name__ == '__main__':
     unittest.main()

@@ -16,20 +16,6 @@ class TaskFinderController:
         g = grupo
         siendo las diferentes convinaciones la forma de busqueda
     """
-    __funtion_to_recover = {'n': TaskFinder.search_for_tasks_by_name,
-                            'd': TaskFinder.search_for_task_by_date,
-                            'c': TaskFinder.search_for_task_by_check,
-                            'g': TaskFinder.search_for_tasks_by_group,
-                            'nd': TaskFinder.search_for_task_by_date_and_name,
-                            'nc': TaskFinder.search_for_task_by_check_name,
-                            'ng': TaskFinder.search_for_tasks_by_name_group,
-                            'dc': TaskFinder.search_for_task_by_check_date,
-                            'dg': TaskFinder.search_for_task_by_date_group,
-                            'cg': TaskFinder.search_for_task_by_check_group,
-                            'ndc': TaskFinder.search_for_task_by_check_date_name,
-                            'dcg': TaskFinder.search_for_task_by_check_date_group,
-                            'ndcg': TaskFinder.search_for_task_by_check_date_name_group
-    }
 
     @staticmethod
     def recover_task(id_grupo=None, nombre=None, realizado=None, fecha_ini=None, fecha_fin=None, archivado=False
