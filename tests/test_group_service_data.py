@@ -113,7 +113,7 @@ class TestGroupServiceData(unittest.TestCase):
 
         result = TaskServiceData.add_members_to_task_group(5, alias_users)
 
-        self.assertEqual(result[0], ['user1', 'user2'])
+        self.assertEqual(result[0], ['user1'])
         self.assertEqual(result[1], [['user2', 'No pertenece al grupo.']])
 
 

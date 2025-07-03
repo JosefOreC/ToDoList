@@ -100,5 +100,57 @@ class TestUserServiceData(unittest.TestCase):
         self.assertFalse(usuario.Estado)  # Verifica que el estado del usuario se haya cambiado a False
         mock_session.commit.assert_called()
 
+    @patch("src.modelo.service.user_service.user_service_data.session")
+    def test_get_all_users(self, mock_session):
+        mock_session.query.return_value.all.return_value = [
+            ("user1", "Juan", "Perez", True)
+        ]
+        result = UserServiceData._UserServiceData__get_all_users()
+        self.assertEqual(result, [("user1", "Juan", "Perez", True)])
+
+    @patch("src.modelo.service.user_service.user_service_data.session")
+    @patch("src.modelo.service.user_service.user_service_data.UpdateUser")
+    def test_update_user_success(self, mock_update, mock_session):
+        mock_user = mock_update.return_value
+
+        UserServiceData.update_user(1, nombres="Juan", apellidos="Pérez", alias="jp", password="1234")
+
+        mock_user.update_nombres.assert_called_once_with("Juan")
+        mock_user.update_apellidos.assert_called_once_with("Pérez")
+        mock_user.update_alias.assert_called_once_with("jp")
+        mock_user.update_password.assert_called_once_with("1234")
+        mock_session.commit.assert_called_once()
+
+    @patch("src.modelo.service.user_service.user_service_data.session")
+    @patch("src.modelo.service.user_service.user_service_data.UpdateUser")
+    def test_update_user_integrity_error(self, mock_update, mock_session):
+        mock_user = mock_update.return_value
+        mock_user.update_alias.side_effect = Exception("Error grave")
+        mock_session.commit.side_effect = Exception("Error grave")
+
+        with self.assertRaises(Exception) as context:
+            UserServiceData.update_user(1, alias="alias_duplicado")
+
+        self.assertIn("Error grave", str(context.exception))
+        mock_session.rollback.assert_called()
+
+    @patch("src.modelo.service.user_service.user_service_data.session")
+    @patch("src.modelo.service.user_service.user_service_data.UserServiceData.is_user_with_alias_exits")
+    def test_recover_basic_data_user_success(self, mock_exists, mock_session):
+        mock_exists.return_value = True
+        mock_session.query.return_value.filter_by.return_value.first.return_value = ("jp", "pregunta", "respuesta")
+
+        result = UserServiceData.recover_basic_data_user("jp")
+        self.assertEqual(result, ("jp", "pregunta", "respuesta"))
+
+    @patch("src.modelo.service.user_service.user_service_data.UserServiceData.is_user_with_alias_exits")
+    def test_recover_basic_data_user_user_not_found(self, mock_exists):
+        mock_exists.return_value = False
+
+        with self.assertRaises(Exception) as context:
+            UserServiceData.recover_basic_data_user("no_existe")
+
+        self.assertIn("no_existe", str(context.exception))
+
 if __name__ == '__main__':
     unittest.main()

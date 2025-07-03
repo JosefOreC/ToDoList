@@ -66,11 +66,11 @@ class TaskController:
         try:
             task_data = TaskServiceData.get_task_data_for_edit(id_usuario=SessionManager.get_id_user(),
                                                                id_tarea=id_tarea)
-            success = True,
+            success = True
             response = "Se recuperaron los datos de la tarea"
         except Exception as E:
-            task_data = None,
-            success = False,
+            task_data = None
+            success = False
             response = f"No se pudieron recuperar los datos de la tarea. \n{E}"
 
         return {

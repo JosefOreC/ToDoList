@@ -253,7 +253,7 @@ class TestTaskController(unittest.TestCase):
 
         result = TaskController.edit_disponible_to_task_in_group(5, "usuario1", False)
 
-        self.assertFalse(result['success'][0])
+        self.assertFalse(result['success'])
         self.assertIn("No se puedo editar el apartado disponible de un usuario. \nError", result['response'])
 
     @patch('src.controlador.task_controller.TaskServiceData.edit_type_check_from_group')
@@ -379,6 +379,193 @@ class TestTaskController(unittest.TestCase):
         self.assertIsNone(result['data']['usuarios_agregados'])
         self.assertIsNone(result['data']['usuarios_invalidos'])
         self.assertIn("No se agregaron", result['response'])
+
+    @patch('src.controlador.task_controller.TaskController.event_update_task_session_manager')
+    @patch('src.controlador.task_controller.GroupServiceData.get_rol_in_group')
+    @patch('src.controlador.task_controller.TaskServiceData.get_id_group_of_task')
+    @patch('src.controlador.task_controller.SessionManager.get_id_user')
+    def test_event_edit_task_session_manager_success(self, mock_user, mock_group, mock_rol, mock_update):
+        mock_user.return_value = 1
+        mock_group.return_value = 5
+        mock_rol.return_value = 'editor'
+        mock_update.return_value = (True, "Actualizado")
+
+        result = TaskController.event_edit_task_session_manager(1, "Tarea", "2025-07-03", 3, "Detalles")
+        self.assertEqual(result, (True, "Actualizado"))
+
+    def test_event_edit_task_session_manager_invalid_fields(self):
+        result = TaskController.event_edit_task_session_manager(1, "", "", "", "")
+        self.assertEqual(result, (False, "No se puede dejar vació ningún campo."))
+
+    @patch('src.controlador.task_controller.GroupServiceData.get_rol_in_group')
+    @patch('src.controlador.task_controller.SessionManager.get_id_user')
+    @patch('src.controlador.task_controller.TaskServiceData.get_id_group_of_task')
+    def test_event_edit_task_session_manager_no_permission(self, mock_group, mock_user, mock_rol):
+        mock_user.return_value = 1
+        mock_group.return_value = 10
+        mock_rol.return_value = Rol.miembro
+
+        result = TaskController.event_edit_task_session_manager(1, "Tarea", "2025-07-03", 3, "Detalles")
+        self.assertEqual(result, (False, "No se tienen los permisos para editar la tarea"))
+
+    @patch('src.controlador.task_controller.RegisterTask')
+    @patch('src.controlador.task_controller.UserServiceData.recover_id_user_for_alias')
+    @patch('src.controlador.task_controller.TaskController._TaskController__create_tarea')
+    @patch('src.controlador.task_controller.GroupServiceData.get_rol_in_group')
+    @patch('src.controlador.task_controller.SessionManager.get_id_user')
+    def test_event_register_task_group_success(self, mock_user, mock_rol, mock_create, mock_recover_id, mock_register):
+        mock_user.return_value = 1
+        mock_rol.return_value.name = "master"
+        mock_create.return_value = (True, "tarea_obj")
+        mock_recover_id.return_value = 11
+        mock_register.return_value.register_task.return_value = (True, "Registrado")
+
+        result = TaskController.event_register_task_group(1, "Tarea", "2025-07-03", 2, "Detalles", False,
+                                                          [["user1", True]])
+        self.assertEqual(result, (True, "Registrado"))
+
+    @patch('src.controlador.task_controller.GroupServiceData.get_rol_in_group')
+    @patch('src.controlador.task_controller.SessionManager.get_id_user')
+    def test_event_register_task_group_no_permission(self, mock_user, mock_rol):
+        mock_user.return_value = 1
+        mock_rol.return_value.name = "miembro"
+        result = TaskController.event_register_task_group(1, "Tarea", "2025-07-03", 2, "Detalles")
+        self.assertEqual(result, (False, "No se tienen los permisos para realizar estos cambios."))
+
+    @patch('src.controlador.task_controller.TaskServiceData.add_group_to_task_exits')
+    def test_event_add_group_task_exits_success(self, mock_add_group):
+        mock_add_group.return_value = None
+        result = TaskController.event_add_group_task_exits(1, 2, [['user1', True]])
+        self.assertEqual(result, (True, "Se agregó el grupo a la tarea."))
+
+    @patch('src.controlador.task_controller.TaskServiceData.add_group_to_task_exits', side_effect=Exception("Falló"))
+    def test_event_add_group_task_exits_fail(self, mock_add_group):
+        result = TaskController.event_add_group_task_exits(1, 2, [['user1', True]])
+        self.assertFalse(result[0])
+        self.assertIn("No se pudo agregar el grupo a la tarea", result[1])
+
+    @patch("src.controlador.task_controller.DataFormat.convertir_data_to_date")
+    def test_create_tarea_fecha_exception(self, mock_convert_date):
+        mock_convert_date.side_effect = Exception("fecha inválida")
+        success, msg = TaskController._TaskController__create_tarea("Mi tarea", "fecha-mal", 3, "detalle")
+        self.assertFalse(success)
+        self.assertIn("Fecha no valida", msg)
+
+    @patch("src.controlador.task_controller.DataFormat.convertir_data_to_date")
+    def test_create_tarea_prioridad_fuera_de_rango(self, mock_convert_date):
+        mock_convert_date.return_value = datetime(2025, 7, 1)
+        success, msg = TaskController._TaskController__create_tarea("Mi tarea", "2025-07-01", 6, "detalle")
+        self.assertFalse(success)
+        self.assertIn("Prioridad no válida", msg)
+
+    @patch("src.controlador.task_controller.DataFormat.convertir_data_to_date")
+    def test_create_tarea_prioridad_value_error(self, mock_convert_date):
+        mock_convert_date.return_value = datetime(2025, 7, 1)
+        success, msg = TaskController._TaskController__create_tarea("Mi tarea", "2025-07-01", "abc", "detalle")
+        self.assertFalse(success)
+        self.assertIsInstance(msg, ValueError)
+
+    @patch("src.controlador.task_controller.DataFormat.convertir_data_to_date")
+    def test_create_tarea_prioridad_type_error(self, mock_convert_date):
+        mock_convert_date.return_value = datetime(2025, 7, 1)
+        success, msg = TaskController._TaskController__create_tarea("Mi tarea", "2025-07-01", None, "detalle")
+        self.assertFalse(success)
+        self.assertIsInstance(msg, TypeError)
+
+    @patch("src.controlador.task_controller.DataFormat.convertir_data_to_date")
+    def test_validar_datos_fecha_invalida(self, mock_convert_date):
+        mock_convert_date.side_effect = Exception("fecha inválida")
+        success, msg = TaskController.validar_datos("fecha-mal", 3)
+        self.assertFalse(success)
+        self.assertIn("Fecha no valida", msg)
+
+    @patch("src.controlador.task_controller.DataFormat.convertir_data_to_date")
+    def test_validar_datos_prioridad_fuera_de_rango(self, mock_convert_date):
+        mock_convert_date.return_value = datetime(2025, 7, 1)
+        success, msg = TaskController.validar_datos("2025-07-01", 0)
+        self.assertFalse(success)
+        self.assertIn("Prioridad no válida", msg)
+
+    @patch("src.controlador.task_controller.DataFormat.convertir_data_to_date")
+    def test_validar_datos_prioridad_value_error(self, mock_convert_date):
+        mock_convert_date.return_value = datetime(2025, 7, 1)
+        success, msg = TaskController.validar_datos("2025-07-01", "xyz")
+        self.assertFalse(success)
+        self.assertIsInstance(msg, ValueError)
+
+    @patch("src.controlador.task_controller.DataFormat.convertir_data_to_date")
+    def test_validar_datos_prioridad_type_error(self, mock_convert_date):
+        mock_convert_date.return_value = datetime(2025, 7, 1)
+        success, msg = TaskController.validar_datos("2025-07-01", None)
+        self.assertFalse(success)
+        self.assertIsInstance(msg, TypeError)
+
+    @patch("src.controlador.task_controller.SessionManager.get_id_user", return_value=1)
+    @patch("src.controlador.task_controller.TaskServiceData.get_task_user_archivade")
+    def test_recover_task_archivate_success(self, mock_get_tasks, mock_user):
+        mock_get_tasks.return_value = ["tarea1", "tarea2"]
+
+        result = TaskController.recover_task_archivate()
+
+        self.assertTrue(result['success'])
+        self.assertIn("Se recuperaron los datos", result['response'])
+        self.assertEqual(result['data']['tareas'], ["tarea1", "tarea2"])
+
+    @patch("src.controlador.task_controller.SessionManager.get_id_user", return_value=1)
+    @patch("src.controlador.task_controller.TaskServiceData.get_task_user_archivade",
+           side_effect=Exception("Error de recuperación"))
+    def test_recover_task_archivate_error(self, mock_get_tasks, mock_user):
+        result = TaskController.recover_task_archivate()
+
+        self.assertFalse(result['success'])
+        self.assertIn("No se recuperaron los datos", result['response'])
+        self.assertIsNone(result['data']['tareas'])
+
+    @patch("src.controlador.task_controller.DataFormat.convert_to_dict_tarea_to_edit")
+    @patch("src.controlador.task_controller.SessionManager.get_id_user", return_value=1)
+    @patch("src.controlador.task_controller.TaskServiceData.get_task_data_for_edit")
+    def test_recover_all_data_task_to_view_details_success(self, mock_get_data, mock_user, mock_convert):
+        mock_get_data.return_value = {"Nombre": "Tarea"}
+        mock_convert.return_value = {"Nombre": "Tarea"}
+
+        result = TaskController.recover_all_data_task_to_view_details(5)
+
+        self.assertTrue(result['success'])
+        self.assertIn("Se recuperaron los datos de la tarea", result['response'])
+        self.assertEqual(result['data']['Nombre'], "Tarea")
+
+    @patch("src.controlador.task_controller.SessionManager.get_id_user", return_value=1)
+    @patch("src.controlador.task_controller.TaskServiceData.get_task_data_for_edit", side_effect=Exception("Error"))
+    def test_recover_all_data_task_to_view_details_error(self, mock_get_data, mock_user):
+        result = TaskController.recover_all_data_task_to_view_details(5)
+
+        self.assertFalse(result['success'])
+        self.assertIn("No se pudieron recuperar los datos de la tarea", result['response'])
+        self.assertIsNone(result['data'])
+
+    @patch("src.controlador.task_controller.SessionManager.get_id_user", return_value=1)
+    @patch("src.controlador.task_controller.TaskServiceData.get_tasks_user_list_date")
+    def test_recover_task_date_success(self, mock_get_tasks, mock_user):
+        mock_get_tasks.return_value = ["TareaFecha"]
+        fecha = datetime(2025, 7, 3)
+
+        result = TaskController.recover_task_date(fecha)
+
+        self.assertTrue(result['success'])
+        self.assertIn("Tareas recuperadas", result['response'])
+        self.assertEqual(result['data']['tareas'], ["TareaFecha"])
+
+    @patch("src.controlador.task_controller.SessionManager.get_id_user", return_value=1)
+    @patch("src.controlador.task_controller.TaskServiceData.get_tasks_user_list_date",
+           side_effect=Exception("Error fecha"))
+    def test_recover_task_date_error(self, mock_get_tasks, mock_user):
+        fecha = datetime(2025, 7, 3)
+        result = TaskController.recover_task_date(fecha)
+
+        self.assertFalse(result['success'])
+        self.assertIn("No se pudo recuperar las tareas", result['response'])
+        self.assertIsNone(result['data']['tareas'])
+
 
 if __name__ == '__main__':
     unittest.main()

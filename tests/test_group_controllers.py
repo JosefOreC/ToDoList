@@ -249,5 +249,90 @@ class TestGroupController(unittest.TestCase):
         # Verifica que se llamó correctamente al metodo del servicio
         mock_get_all.assert_called_once_with(1)
 
+    @patch('src.controlador.group_controller.GroupServiceData.expel_member_group')
+    @patch('src.controlador.group_controller.UserServiceData.recover_id_user_for_alias')
+    def test_expel_member_success(self, mock_recover_id, mock_expel):
+        mock_recover_id.return_value = 10
+
+        result = GroupController.expel_member(5, "usuario1")
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["response"], "Se expulsó al usuario usuario1 exitosamente.")
+        mock_expel.assert_called_once_with(id_grupo=5, id_usuario=10, delete_registers=False)
+
+    @patch('src.controlador.group_controller.GroupServiceData.expel_member_group',
+           side_effect=Exception("Error inesperado"))
+    @patch('src.controlador.group_controller.UserServiceData.recover_id_user_for_alias')
+    def test_expel_member_failure(self, mock_recover_id, mock_expel):
+        mock_recover_id.return_value = 20
+
+        result = GroupController.expel_member(3, "usuarioX")
+
+        self.assertFalse(result["success"])
+        self.assertIn("No se pudo expulsar al usuario usuarioX", result["response"])
+        self.assertIn("Error inesperado", result["response"])
+
+    @patch("src.controlador.group_controller.GroupServiceData.add_members_in_group")
+    @patch("src.controlador.group_controller.GroupController.recover_id_user")
+    @patch("src.controlador.group_controller.GroupController.is_member_in_group", return_value=False)
+    @patch("src.controlador.group_controller.GroupController.get_rol_in_group", return_value='master')
+    def test_add_members_to_group_success(self, mock_rol, mock_is_member, mock_recover, mock_add):
+        mock_recover.side_effect = lambda alias: 1
+        result = GroupController.add_members_to_group(1, ["usuario1"])
+        self.assertTrue(result[0])
+        self.assertIn("guardaron", result[1])
+
+    @patch("src.controlador.group_controller.GroupController.get_rol_in_group", return_value='miembro')
+    def test_add_members_to_group_no_permission(self, _):
+        result = GroupController.add_members_to_group(1, ["usuario1"])
+        self.assertFalse(result[0])
+        self.assertIn("No se tienen los permisos", result[1])
+
+    @patch("src.controlador.group_controller.GroupController.recover_id_user", side_effect=Exception("Error"))
+    @patch("src.controlador.group_controller.GroupController.is_member_in_group", return_value=False)
+    @patch("src.controlador.group_controller.GroupController.get_rol_in_group", return_value='master')
+    def test_add_members_to_group_recover_fail(self, *_):
+        result = GroupController.add_members_to_group(1, ["usuario1"])
+        self.assertFalse(result[0])
+        self.assertIn("No se pudo agregar", result[1])
+
+    @patch("src.controlador.group_controller.GroupServiceData.get_all_user_groups", side_effect=Exception("Error"))
+    @patch("src.controlador.group_controller.SessionManager.get_id_user", return_value=1)
+    def test_get_all_groups_of_session_manager_fail(self, *_):
+        result = GroupController.get_all_groups_of_session_manager()
+        self.assertFalse(result["success"])
+        self.assertIsNone(result["data"]["grupos"])
+
+    @patch("src.controlador.group_controller.GroupServiceData.change_rol_of_member")
+    @patch("src.controlador.group_controller.UserServiceData.recover_id_user_for_alias", return_value=2)
+    @patch("src.controlador.group_controller.GroupController.get_rol_in_group", return_value='master')
+    def test_set_rol_member_success(self, *_):
+        result = GroupController.set_rol_member("usuario1", 1, Rol.editor)
+        self.assertTrue(result["success"])
+        self.assertIn("guardaron", result["response"])
+
+    @patch("src.controlador.group_controller.UserServiceData.recover_id_user_for_alias",
+           side_effect=Exception("Error alias"))
+    @patch("src.controlador.group_controller.GroupController.get_rol_in_group", return_value='master')
+    def test_set_rol_member_fail_alias(self, *_):
+        result = GroupController.set_rol_member("usuario1", 1, Rol.editor)
+        self.assertFalse(result["success"])
+        self.assertIn("No se pudo recuperar", result["response"])
+
+    @patch("src.controlador.group_controller.GroupServiceData.change_rol_of_member",
+           side_effect=Exception("Error cambio"))
+    @patch("src.controlador.group_controller.UserServiceData.recover_id_user_for_alias", return_value=2)
+    @patch("src.controlador.group_controller.GroupController.get_rol_in_group", return_value='master')
+    def test_set_rol_member_fail_change(self, *_):
+        result = GroupController.set_rol_member("usuario1", 1, Rol.editor)
+        self.assertFalse(result["success"])
+        self.assertIn("No se pudo actualizar", result["response"])
+
+    @patch("src.controlador.group_controller.GroupController.get_rol_in_group", return_value='miembro')
+    def test_set_rol_member_no_permission(self, _):
+        result = GroupController.set_rol_member("usuario1", 1, Rol.editor)
+        self.assertFalse(result[0])
+        self.assertIn("No se tienen los permisos", result[1])
+
 if __name__ == '__main__':
     unittest.main()

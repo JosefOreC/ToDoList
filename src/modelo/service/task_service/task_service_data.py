@@ -278,7 +278,7 @@ class TaskServiceData:
             session.commit()
         except Exception as E:
             session.rollback()
-            raise Exception("No se pudo agregar la relacion.\n {E}")
+            raise Exception(f"No se pudo agregar la relación.\n {E}")
 
     @staticmethod
     def add_members_to_task_group(id_tarea, alias_users_permitions: list[str,bool])\

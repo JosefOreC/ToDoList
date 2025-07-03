@@ -213,5 +213,32 @@ class TestDataFormat(unittest.TestCase):
         # Restaurar metodo original
         DataFormat.convert_to_dict_group_data = original
 
+    def test_convert_to_dict_task_data_groups(self):
+        # Mock tarea
+        tarea_mock = MagicMock()
+        tarea_mock.IDTarea = 1
+        tarea_mock.Nombre = "Tarea de prueba"
+        tarea_mock.Fecha_programada = datetime(2025, 7, 3)
+        tarea_mock.Prioridad = 3
+        tarea_mock.Detalle = "Detalle de tarea"
+
+        # Simular lista con una tupla (tarea, archivado, realizado, disponible)
+        tareas = [(tarea_mock, False, True, True)]
+
+        # Ejecutar función
+        result = DataFormat.convert_to_dict_task_data_groups(tareas)
+
+        # Validar
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["id_tarea"], 1)
+        self.assertEqual(result[0]["nombre"], "Tarea de prueba")
+        self.assertEqual(result[0]["fecha"], "03-07-2025")
+        self.assertEqual(result[0]["realizado"], True)
+        self.assertEqual(result[0]["disponible"], True)
+        self.assertEqual(result[0]["detalle"], "Detalle de tarea")
+        self.assertEqual(result[0]["archivado"], False)
+        self.assertEqual(result[0]["prioridad"], DataFormat.prioridades.get(3))
+        self.assertEqual(result[0]["nombre_prioridad"], DataFormat.prioridades.get(3))
+
 if __name__ == "__main__":
     unittest.main()
