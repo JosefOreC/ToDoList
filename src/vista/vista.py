@@ -1750,6 +1750,7 @@ class RegisterTareaUserView:
             messagebox.showinfo(title='Tarea Creada', message=response_msg)
         else:
             messagebox.showerror(title='Error', message=response_msg)
+            return
         MainView(self.root)
 
     def btn_volver(self):

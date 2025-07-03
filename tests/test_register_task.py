@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from datetime import datetime
+from datetime import date
 from src.modelo.service.task_service.register_task import RegisterTask
 from src.modelo.entities.tarea import Tarea
 
@@ -8,7 +8,8 @@ from src.modelo.entities.tarea import Tarea
 class TestRegisterTask(unittest.TestCase):
 
     def setUp(self):
-        self.fake_task = Tarea(IDTarea=1, Nombre="Test", Fecha_programada=datetime.today(), Prioridad=2, Detalle="Detalles", Activo=True)
+        self.fake_task = Tarea(IDTarea=1, Nombre="Test", Fecha_programada=date.today(), Prioridad=2,
+                               Detalle="Detalles", Activo=True)
 
     @patch("src.modelo.service.task_service.register_task.SessionManager.get_instance")
     @patch("src.modelo.service.task_service.register_task.TaskServiceData.insert_task_user")

@@ -4,7 +4,7 @@ Clase que se ocupa de la creación de una tarea y su subida a la base de datos.
 
 from src.modelo.entities.tarea import Tarea
 from src.modelo.service.session_service.session_manager import SessionManager
-from src.modelo.service.task_service.task_service_data import TaskServiceData
+from src.modelo.service.task_service.task_service_data import TaskServiceData, date
 
 from src.modelo.entities.modelo import UsuarioTarea, Usuario, Rol
 from src.modelo.service.group_service.group_service_data import GroupServiceData
@@ -57,6 +57,8 @@ class RegisterTask:
         self.relaciones.append(usuario_tarea)
 
     def register_task(self):
+        if self.tarea.Fecha_programada < date.today():
+            raise Exception("No se pruede programar una tarea en una fecha anterior a la actual")
         if self.id_grupo:
             self.__register_task_group()
         else:

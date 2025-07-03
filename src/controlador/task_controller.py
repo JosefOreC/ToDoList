@@ -116,8 +116,10 @@ class TaskController:
         is_tarea_create, response = TaskController.__create_tarea(nombre, fecha, prioridad, detalle)
         if not is_tarea_create:
             return is_tarea_create, response
-        return RegisterTask(response).register_task()
-
+        try:
+            return RegisterTask(response).register_task()
+        except Exception as E:
+            return False, E
     @staticmethod
     def __create_tarea(nombre: str, fecha: str, prioridad: int, detalle: str, tipo_check: bool = False) -> bool or Tarea:
         """Crea una instancia de tarea validando fecha y prioridad.
