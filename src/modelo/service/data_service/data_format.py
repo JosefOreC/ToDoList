@@ -56,7 +56,7 @@ class DataFormat:
 
     @staticmethod
     def convertir_date_to_str(fecha: datetime or date):
-        if isinstance(fecha, datetime or date):
+        if isinstance(fecha, (datetime, date)):
             return fecha.strftime("%d-%m-%Y")
         raise ValueError("Tipo de dato no soportado")
 
