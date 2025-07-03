@@ -47,6 +47,44 @@ class TestGroupFinderController(unittest.TestCase):
             self.assertEqual(result['response'], "Se recuperaron los datos del grupo.")
             self.assertEqual(result['data']['grupos'][0]['nombre'], 'grupo_sugerido')
 
+    @patch('src.controlador.group_finder_controller.DataFormat.convert_to_dict_groups_data')
+    @patch('src.controlador.group_finder_controller.GroupFinder.search_for_group_by')
+    @patch('src.controlador.group_finder_controller.SessionManager.get_id_user')
+    def test_recover_group_by_filters_success(self, mock_get_user, mock_search, mock_convert):
+        # Simular ID de usuario de sesión
+        mock_get_user.return_value = 99
+
+        # Simular retorno de búsqueda de grupos
+        mock_search.return_value = ['grupo1', 'grupo2']
+
+        # Simular conversión de grupos a diccionario
+        mock_convert.return_value = [{'id': 1}, {'id': 2}]
+
+        resultado = GroupFinderController.recover_group_by_filters("grupo", "admin")
+
+        self.assertTrue(resultado['success'])
+        self.assertIn("Se recuperaron los grupos", resultado['response'])
+        self.assertEqual(resultado['data']['grupos'], [{'id': 1}, {'id': 2}])
+
+        mock_get_user.assert_called_once()
+        mock_search.assert_called_once_with(id_usuario=99, nombre="grupo", rol="admin")
+        mock_convert.assert_called_once_with(['grupo1', 'grupo2'])
+
+    @patch('src.controlador.group_finder_controller.DataFormat.convert_to_dict_groups_data')
+    @patch('src.controlador.group_finder_controller.GroupFinder.search_for_group_by', side_effect=Exception("Error DB"))
+    @patch('src.controlador.group_finder_controller.SessionManager.get_id_user')
+    def test_recover_group_by_filters_error(self, mock_get_user, mock_search, mock_convert):
+        # Simular ID de usuario
+        mock_get_user.return_value = 50
+
+        resultado = GroupFinderController.recover_group_by_filters("grupo", "viewer")
+
+        self.assertFalse(resultado['success'])
+        self.assertIn("No se recuperaron los grupos", resultado['response'])
+        self.assertIsNone(resultado['data']['grupos'])
+
+        mock_get_user.assert_called_once()
+        mock_convert.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()

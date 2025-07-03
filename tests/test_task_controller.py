@@ -234,6 +234,151 @@ class TestTaskController(unittest.TestCase):
         self.assertTrue(result['success'])
         self.assertEqual(result['response'], 'Se archivó la tarea')
 
+    @patch('src.controlador.task_controller.TaskServiceData.edit_disponible_from_user')
+    @patch('src.controlador.task_controller.UserServiceData.recover_id_user_for_alias')
+    def test_edit_disponible_success(self, mock_recover_id, mock_edit_disponible):
+        mock_recover_id.return_value = 10
+
+        result = TaskController.edit_disponible_to_task_in_group(5, "usuario1", True)
+
+        self.assertTrue(result['success'])
+        self.assertIn("Se editó el apartado disponible", result['response'])
+        mock_recover_id.assert_called_once_with("usuario1")
+        mock_edit_disponible.assert_called_once_with(id_usuario=10, id_tarea=5, disponible=True)
+
+    @patch('src.controlador.task_controller.TaskServiceData.edit_disponible_from_user', side_effect=Exception("Error"))
+    @patch('src.controlador.task_controller.UserServiceData.recover_id_user_for_alias')
+    def test_edit_disponible_error(self, mock_recover_id, mock_edit_disponible):
+        mock_recover_id.return_value = 10
+
+        result = TaskController.edit_disponible_to_task_in_group(5, "usuario1", False)
+
+        self.assertFalse(result['success'][0])
+        self.assertIn("No se puedo editar el apartado disponible de un usuario. \nError", result['response'])
+
+    @patch('src.controlador.task_controller.TaskServiceData.edit_type_check_from_group')
+    @patch('src.controlador.task_controller.UserServiceData.recover_id_user_for_alias')
+    def test_edit_type_check_success(self, mock_recover_id, mock_edit_type_check):
+        mock_recover_id.return_value = 7
+
+        result = TaskController.edit_type_check_to_task(15, "usuario2", "auto")
+
+        self.assertTrue(result['success'])
+        self.assertIn("Se actualizó el tipo de check", result['response'])
+        mock_edit_type_check.assert_called_once_with(7, 15, "auto")
+
+    @patch('src.controlador.task_controller.TaskServiceData.edit_type_check_from_group',
+           side_effect=Exception("Error tipo check"))
+    @patch('src.controlador.task_controller.UserServiceData.recover_id_user_for_alias')
+    def test_edit_type_check_error(self, mock_recover_id, mock_edit_type_check):
+        mock_recover_id.return_value = 8
+
+        result = TaskController.edit_type_check_to_task(20, "usuario3", "manual")
+
+        self.assertFalse(result['success'])
+        self.assertIn("No se puedo actualizar el tipo de check", result['response'])
+
+    @patch('src.controlador.task_controller.TaskServiceData.delete_relation_task_member_group')
+    @patch('src.controlador.task_controller.UserServiceData.recover_id_user_for_alias')
+    def test_delete_user_of_task_success(self, mock_recover_id, mock_delete):
+        mock_recover_id.return_value = 11
+
+        result = TaskController.delete_user_of_task_group("usuarioX", 30)
+
+        self.assertTrue(result['success'])
+        self.assertIn("Se quitó al usuario usuarioX", result['response'])
+        mock_delete.assert_called_once_with(11, 30)
+
+    @patch('src.controlador.task_controller.TaskServiceData.delete_relation_task_member_group',
+           side_effect=Exception("Error eliminación"))
+    @patch('src.controlador.task_controller.UserServiceData.recover_id_user_for_alias')
+    def test_delete_user_of_task_error(self, mock_recover_id, mock_delete):
+        mock_recover_id.return_value = 12
+
+        result = TaskController.delete_user_of_task_group("usuarioY", 31)
+
+        self.assertFalse(result['success'])
+        self.assertIn("No se pudo quitar al usuario usuarioY", result['response'])
+
+    @patch('src.controlador.task_controller.SessionManager.get_id_user', return_value=50)
+    @patch('src.controlador.task_controller.GroupServiceData.get_rol_in_group', return_value=Rol.miembro)
+    @patch('src.controlador.task_controller.TaskServiceData.get_id_group_of_task', return_value=99)
+    def test_tarea_con_grupo_sin_permisos(self, mock_get_group, mock_get_rol, mock_get_user):
+        result = TaskController.event_delete_task(1)
+        self.assertFalse(result[0])
+        self.assertIn("No se tienen los permisos", result[1])
+        mock_get_rol.assert_called_once()
+
+    @patch('src.controlador.task_controller.TaskServiceData.delete_relation_task')
+    @patch('src.controlador.task_controller.SessionManager.get_id_user', return_value=10)
+    @patch('src.controlador.task_controller.GroupServiceData.get_rol_in_group', side_effect=Exception("No tiene rol"))
+    @patch('src.controlador.task_controller.TaskServiceData.get_id_group_of_task', return_value=88)
+    def test_tarea_con_grupo_sin_rol_borra_relacion(self, mock_get_group, mock_get_rol, mock_get_user,
+                                                    mock_delete_relation):
+        result = TaskController.event_delete_task(3)
+        self.assertTrue(result[0])
+        self.assertEqual(result[1], "Tarea Eliminada")
+        mock_delete_relation.assert_called_once_with(id_usuario=10, id_tarea=3)
+
+    @patch('src.controlador.task_controller.TaskServiceData.delete_relation_task', side_effect=Exception("Fallo grave"))
+    @patch('src.controlador.task_controller.SessionManager.get_id_user', return_value=20)
+    @patch('src.controlador.task_controller.GroupServiceData.get_rol_in_group', side_effect=Exception("Error rol"))
+    @patch('src.controlador.task_controller.TaskServiceData.get_id_group_of_task', return_value=99)
+    def test_error_eliminar_relacion(self, *_):
+        result = TaskController.event_delete_task(99)
+        self.assertFalse(result[0])
+        self.assertIn("No se pudo eliminar la tarea", result[1])
+
+    @patch('src.controlador.task_controller.TaskServiceData.soft_delete_task')
+    @patch('src.controlador.task_controller.TaskServiceData.get_id_group_of_task', return_value=None)
+    def test_soft_delete_exitoso(self, mock_get_group, mock_soft_delete):
+        result = TaskController.event_delete_task(55)
+        self.assertTrue(result[0])
+        self.assertEqual(result[1], "Tarea eliminada")
+        mock_soft_delete.assert_called_once_with(id_tarea=55)
+
+    @patch('src.controlador.task_controller.TaskServiceData.soft_delete_task', side_effect=Exception("Error DB"))
+    @patch('src.controlador.task_controller.TaskServiceData.get_id_group_of_task', return_value=None)
+    def test_soft_delete_falla(self, mock_get_group, mock_soft_delete):
+        result = TaskController.event_delete_task(66)
+        self.assertFalse(result[0])
+        self.assertIn("No se pudo eliminar la tarea", result[1])
+
+    @patch('src.controlador.task_controller.TaskServiceData.add_members_to_task_group')
+    def test_add_all_valid_members(self, mock_add_members):
+        mock_add_members.return_value = (["user1", "user2"], [])
+
+        alias_users = [["user1", True], ["user2", True]]
+        result = TaskController.add_member_group_to_task(alias_users, id_tarea=10)
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['data']['usuarios_agregados'], "all")
+        self.assertIsNone(result['data']['usuarios_invalidos'])
+        self.assertIn("Se agregaron", result['response'])
+
+        mock_add_members.assert_called_once_with(id_tarea=10, alias_users_permitions=alias_users)
+
+    @patch('src.controlador.task_controller.TaskServiceData.add_members_to_task_group')
+    def test_add_some_valid_some_invalid(self, mock_add_members):
+        mock_add_members.return_value = (["user1"], [("user2", "ya existe")])
+
+        alias_users = [["user1", True], ["user2", True]]
+        result = TaskController.add_member_group_to_task(alias_users, id_tarea=15)
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['data']['usuarios_agregados'], [{'alias': 'user1'}])
+        self.assertEqual(result['data']['usuarios_invalidos'], [{'alias': 'user2', 'fail': 'ya existe'}])
+
+    @patch('src.controlador.task_controller.TaskServiceData.add_members_to_task_group',
+           side_effect=Exception("Error general"))
+    def test_add_members_exception(self, mock_add_members):
+        alias_users = [["user1", True], ["user2", False]]
+        result = TaskController.add_member_group_to_task(alias_users, id_tarea=99)
+
+        self.assertFalse(result['success'])
+        self.assertIsNone(result['data']['usuarios_agregados'])
+        self.assertIsNone(result['data']['usuarios_invalidos'])
+        self.assertIn("No se agregaron", result['response'])
 
 if __name__ == '__main__':
     unittest.main()

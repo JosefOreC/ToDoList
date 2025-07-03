@@ -173,6 +173,81 @@ class TestGroupController(unittest.TestCase):
         self.assertTrue(result['success'])
         self.assertEqual(result['response'], "Saliste del grupo correctamente")
 
+    @patch('src.controlador.group_controller.SessionManager.get_instance')
+    @patch('src.controlador.group_controller.GroupController.get_rol_in_group')
+    def test_no_es_master(self, mock_get_rol, mock_get_session):
+        # Simular sesión activa
+        mock_session = MagicMock()
+        mock_session.usuario.IDUsuario = 1
+        mock_get_session.return_value = mock_session
+
+        mock_get_rol.return_value = 'member'
+        resultado = GroupController.set_rol_members(1, [['usuario1', 'admin']])
+        self.assertEqual(resultado, (False, "No se tienen los permisos para realizar estos cambios."))
+
+    @patch('src.controlador.group_controller.SessionManager.get_instance')
+    @patch('src.controlador.group_controller.GroupController.set_rol_member')
+    @patch('src.controlador.group_controller.GroupController.get_rol_in_group')
+    def test_todos_los_cambios_correctos(self, mock_get_rol, mock_set_rol, mock_get_session):
+        mock_get_rol.return_value = 'master'
+        mock_set_rol.return_value = {'success': True}
+
+        mock_session = MagicMock()
+        mock_session.usuario.IDUsuario = 1
+        mock_get_session.return_value = mock_session
+
+        cambios = [['usuario1', 'admin'], ['usuario2', 'viewer']]
+        resultado = GroupController.set_rol_members(1, cambios)
+
+        self.assertEqual(resultado, {
+            'success': True,
+            'response': 'Se guardaron los cambios'
+        })
+
+    @patch('src.controlador.group_controller.SessionManager.get_instance')
+    @patch('src.controlador.group_controller.GroupController.set_rol_member')
+    @patch('src.controlador.group_controller.GroupController.get_rol_in_group')
+    def test_algunos_cambios_fallidos(self, mock_get_rol, mock_set_rol, mock_get_session):
+        mock_get_rol.return_value = 'master'
+
+        # Simulación: usuario1 falla, usuario2 pasa
+        def side_effect(alias_member, id_grupo, rol):
+            if alias_member == 'usuario1':
+                return {'success': False, 'response': f'Error con {alias_member}'}
+            return {'success': True}
+
+        mock_set_rol.side_effect = side_effect
+
+        mock_session = MagicMock()
+        mock_session.usuario.IDUsuario = 1
+        mock_get_session.return_value = mock_session
+
+        cambios = [['usuario1', 'admin'], ['usuario2', 'viewer']]
+        resultado = GroupController.set_rol_members(1, cambios)
+
+        self.assertEqual(resultado, {
+            'success': False,
+            'response': ['Error con usuario1']
+        })
+
+    @patch('src.controlador.group_controller.GroupServiceData.get_all_members')
+    def test_get_all_members(self, mock_get_all):
+        # Simular datos de retorno
+        mock_get_all.return_value = [
+            {'id': 1, 'alias': 'usuario1', 'rol': 'admin'},
+            {'id': 2, 'alias': 'usuario2', 'rol': 'viewer'},
+        ]
+
+        resultado = GroupController.get_all_members(1)
+
+        # Verifica que retorne lo mismo
+        self.assertEqual(resultado, [
+            {'id': 1, 'alias': 'usuario1', 'rol': 'admin'},
+            {'id': 2, 'alias': 'usuario2', 'rol': 'viewer'},
+        ])
+
+        # Verifica que se llamó correctamente al metodo del servicio
+        mock_get_all.assert_called_once_with(1)
 
 if __name__ == '__main__':
     unittest.main()

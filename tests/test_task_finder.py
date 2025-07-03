@@ -61,6 +61,36 @@ class TestTaskFinder(unittest.TestCase):
             TaskFinder.search_for_task_by_date(1)
         self.assertIn("No existen los datos necesarios para la busqueda", str(context.exception))
 
+    @patch('src.modelo.service.task_service.task_finder.session')
+    @patch('src.modelo.service.task_service.task_finder.DataFormat.convertir_data_to_date')
+    def test_search_success_with_both_dates(self, mock_convert_date, mock_session):
+        mock_convert_date.side_effect = lambda x: x  # Simula que devuelve la fecha tal cual
+        mock_query = MagicMock()
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = ['result']
+
+        result = TaskFinder.search_for_task_by_check_date_name(
+            id_usuario=1,
+            nombre="Tarea",
+            realizado=True,
+            fecha_ini=date(2025, 7, 1),
+            fecha_fin=date(2025, 7, 3),
+            archivado=False
+        )
+
+        self.assertEqual(result, ['result'])
+        mock_convert_date.assert_any_call(date(2025, 7, 1))
+        mock_convert_date.assert_any_call(date(2025, 7, 3))
+
+    def test_search_fail_missing_dates(self):
+        with self.assertRaises(Exception) as context:
+            TaskFinder.search_for_task_by_check_date_name(
+                id_usuario=1,
+                nombre="Tarea",
+                realizado=False,
+                fecha_ini=None,
+                fecha_fin=None
+            )
+        self.assertIn("No existen los datos necesarios", str(context.exception))
 
 if __name__ == "__main__":
     unittest.main()

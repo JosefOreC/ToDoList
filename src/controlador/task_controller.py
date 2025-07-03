@@ -448,7 +448,7 @@ class TaskController:
             success = True
             response = "Se editó el apartado disponible de un usuario de la tarea."
         except Exception as E:
-            success = False,
+            success = False
             response = f"No se puedo editar el apartado disponible de un usuario. \n{E}"
 
         return {

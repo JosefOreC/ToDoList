@@ -57,6 +57,42 @@ class TestGroupFinder(unittest.TestCase):
         self.assertEqual(result, [])
         mock_filter.all.assert_called_once()
 
+    @patch('src.modelo.service.group_service.group_finder.session')
+    def test_search_all_filters(self, mock_session):
+        mock_query = MagicMock()
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = ['group1', 'group2']
+
+        result = GroupFinder.search_for_group_by(id_usuario=1, nombre="Proyecto", rol="editor")
+
+        self.assertEqual(result, ['group1', 'group2'])
+        mock_session.query.assert_called()
+
+    @patch('src.modelo.service.group_service.group_finder.session')
+    def test_search_only_user(self, mock_session):
+        mock_query = MagicMock()
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = ['group1']
+
+        result = GroupFinder.search_for_group_by(id_usuario=2)
+
+        self.assertEqual(result, ['group1'])
+
+    @patch('src.modelo.service.group_service.group_finder.session')
+    def test_search_empty_name(self, mock_session):
+        mock_query = MagicMock()
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = ['groupX']
+
+        result = GroupFinder.search_for_group_by(id_usuario=3, nombre="")
+
+        self.assertEqual(result, ['groupX'])
+
+    @patch('src.modelo.service.group_service.group_finder.session')
+    def test_search_with_rol_only(self, mock_session):
+        mock_query = MagicMock()
+        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = ['groupY']
+
+        result = GroupFinder.search_for_group_by(id_usuario=4, rol="master")
+
+        self.assertEqual(result, ['groupY'])
 
 if __name__ == '__main__':
     unittest.main()
