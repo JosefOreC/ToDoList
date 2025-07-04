@@ -348,7 +348,7 @@ class MainView:
         self.prev_button = None
         self.next_button = None
         self.page_label = None
-
+        self.root.root.minsize(500,600)
         self.create_main_interface()
 
 

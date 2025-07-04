@@ -99,7 +99,11 @@ class TaskServiceData:
     @staticmethod
     def edit_disponible_from_user(id_usuario, id_tarea, disponible):
         TaskServiceData.update_task_user(id_usuario=id_usuario, id_tarea=id_tarea, disponible=disponible)
-
+    @staticmethod
+    def edit_check_task(id_tarea,id_usuario, check):
+        updatetask=UpdateTask(id_tarea, id_usuario)
+        updatetask.update_realizado(check)
+        session.commit()
     @staticmethod
     def edit_type_check_from_group(id_usuario, id_tarea, type_check):
         TaskServiceData.update_task_user(id_usuario=id_usuario, id_tarea=id_tarea, type_check=type_check)

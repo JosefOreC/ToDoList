@@ -2,6 +2,9 @@
 Controla los datos de una tarea para su actualización
 no se involucra con la base de datos.
 """
+from sys import exception
+
+from sqlalchemy import false
 
 from src.modelo.entities.usuario_tarea import UsuarioTarea
 from src.modelo.entities.tarea import Tarea
@@ -71,6 +74,8 @@ class UpdateTask:
         Args:
             realizado (bool): True si fue realizada, False si no.
         """
+        if self.__usuario_tarea.Disponible is False:
+            raise Exception("No se tiene permisos para checkear la tarea.")
         if self.__tarea.type_check is True:
             usuario_tareas = session.query(UsuarioTarea).filter_by(IDTarea=self.__usuario_tarea.IDTarea,
                                                                    IDGrupo=self.__usuario_tarea.IDGrupo).all()

@@ -233,8 +233,12 @@ class TaskController:
 
     @staticmethod
     def event_check_in_task(id_tarea, realizado):
-        if not TaskServiceData.is_editable_task_for_user(id_tarea, SessionManager.get_id_user()):
-            return False, "El usuario no tiene permisos para checkear esta tarea."
+        try:
+            TaskServiceData.edit_check_task(id_tarea, SessionManager.get_id_user(), realizado)
+            return True, "Se actualizo el chek con exito"
+        except Exception as aea:
+            return False, f"No tengo sencillo hijito \n{aea}"
+
 
         return TaskController.event_update_task_session_manager(id_tarea, realizado=realizado)
 
